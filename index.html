@@ -155,7 +155,7 @@ section{margin-top:16px}
       <p class="muted">Source messages are private. Published structured observations with exact timestamp tracking.</p>
       <div class="scroll">
         <table>
-          <thead><tr><th>Item</th><th>Price</th><th>Type</th><th>Exact roll</th><th>Timestamp</th><th>Source</th></tr></thead>
+          <thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Type</th><th>Exact roll</th><th>Timestamp</th><th>Source</th></tr></thead>
           <tbody id="historyRows"></tbody>
         </table>
       </div>
@@ -203,7 +203,7 @@ section{margin-top:16px}
       <p id="parseStatus"></p>
       <div class="scroll">
         <table>
-          <thead><tr><th>Use</th><th>Item</th><th>Price</th><th>Type</th><th>Timestamp</th><th>Roll</th><th>Status</th></tr></thead>
+          <thead><tr><th>Use</th><th>Item</th><th>Price</th><th>Qty</th><th>Type</th><th>Timestamp</th><th>Roll</th><th>Status</th></tr></thead>
           <tbody id="preview"></tbody>
         </table>
       </div>
@@ -359,7 +359,7 @@ function render() {
   $('obsItem').innerHTML = items.map(i => `<option value="${i.id}">${esc(i.name)} (${esc(i.category)})</option>`).join('');
 
   $('historyRows').innerHTML = observations.slice().reverse().map(o => 
-    `<tr><td>${esc(im.get(o.item_id)?.name || 'Unknown')}</td><td>${money(o.price)}</td><td>${esc(o.listing_type)}</td><td>${esc(roll(vm.get(o.variant_id)))}</td><td>${esc(fmtTime(o.observed_at))}</td><td>${esc(o.source_name || 'Discord')}</td></tr>`
+    `<tr><td>${esc(im.get(o.item_id)?.name || 'Unknown')}</td><td>${money(o.price)}</td><td>${o.quantity || 1}</td><td>${esc(o.listing_type)}</td><td>${esc(roll(vm.get(o.variant_id)))}</td><td>${esc(fmtTime(o.observed_at))}</td><td>${esc(o.source_name || 'Discord')}</td></tr>`
   ).join('');
 
   let groups = new Map();
@@ -458,7 +458,7 @@ async function saveObservation(o) {
     if (error) throw error;
     variant_id = data.id;
   }
-  let row = {item_id, variant_id, price: o.price, listing_type: o.status, source_name: o.source || null, raw_text: o.raw || null, confidence: 'unverified', observed_at: o.timestamp || o.observed_at || new Date().toISOString()};
+  let row = {item_id, variant_id, price: o.price, quantity: o.quantity || 1, listing_type: o.status, source_name: o.source || null, raw_text: o.raw || null, confidence: 'unverified', observed_at: o.timestamp || o.observed_at || new Date().toISOString()};
   let {error} = await client.from('price_observations').insert(row);
   if (error) throw error;
 }
@@ -520,30 +520,69 @@ function parseLine(line, headers, recordMeta) {
     headers.forEach((h, i) => o[h] = vals[i] || '');
     let p = numeric(o.price);
     if (!o.item || !Number.isFinite(p) || p <= 0) return null;
-    return {name: o.item, price: p, status: status(o.status), category: o.category || items.find(i => i.name.toLowerCase() === o.item.toLowerCase())?.category || 'Other', rarity: o.rarity || '', enchantment: o.enchantment || '', upgrade: o.upgrade || '', stats: o.stats || '', source: o.source || recordMeta?.source || '', timestamp: o.timestamp || o.observed_at || recordMeta?.timestamp || '', raw: typeof line === 'string' ? line : line.join(',')};
+    return {name: o.item, price: p, quantity: Number(o.quantity) || 1, status: status(o.status), category: o.category || items.find(i => i.name.toLowerCase() === o.item.toLowerCase())?.category || 'Other', rarity: o.rarity || '', enchantment: o.enchantment || '', upgrade: o.upgrade || '', stats: o.stats || '', source: o.source || recordMeta?.source || '', timestamp: o.timestamp || o.observed_at || recordMeta?.timestamp || '', raw: typeof line === 'string' ? line : line.join(',')};
   }
+
   let cleanStr = typeof line === 'string' ? line : String(line);
   let clean = cleanStr.replace(/<@!?\d+>|<#\d+>/g, ' ').replace(/https?:\/\/\S+/g, ' ').replace(/\s+/g, ' ').trim();
   if (!clean) return null;
+
   let direction = /\b(WTB|LF|buying|looking for)\b/i.test(clean) ? 'buy' : /\b(sold|completed sale|sold for)\b/i.test(clean) ? 'sold' : 'sell';
-  let known = items.filter(i => new RegExp('(^|[^a-z0-9])' + i.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=$|[^a-z0-9])', 'i').test(clean)).sort((a,b) => b.name.length - a.name.length);
+
+  // 1. EXTRACT & STRIP QUANTITY FIRST (e.g. "3x", "x12", "qty: 5")
+  let quantity = 1;
+  let qtyMatch = clean.match(/\b(?:(\d+)\s*x|x\s*(\d+)|qty\s*[:=]?\s*(\d+))\b/i);
+  if (qtyMatch) {
+    let qVal = qtyMatch[1] || qtyMatch[2] || qtyMatch[3];
+    if (qVal) quantity = parseInt(qVal, 10);
+  }
+  let cleanNoQty = clean.replace(/\b(?:\d+\s*x|x\s*\d+|qty\s*[:=]?\s*\d+)\b/gi, ' ');
+
+  // 2. MATCH KNOWN CATALOGUE ITEMS
+  let known = items.filter(i => new RegExp('(^|[^a-z0-9])' + i.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=$|[^a-z0-9])', 'i').test(cleanNoQty)).sort((a,b) => b.name.length - a.name.length);
   let item = known[0];
-  let simple = clean.match(/^(?:WTS|WTB|LF|selling|buying)?\s*(.*?)\s+[-–—:=|]\s*(?:for\s*)?(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb]?)\s*$/i);
-  let name = item?.name || simple?.[1]?.trim();
-  if (name) name = name.replace(/^(?:WTS|WTB|LF|selling|buying)\s+/i, '').trim();
-  let candidates = [...clean.matchAll(/(?:^|[\s:=|])(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb])\b/gi)].map(x => numeric(x[1]));
-  let priceMatch = clean.match(/\b(?:for|price|asking|offer(?:ing)?|paying|sold(?:\s+for)?)\s*[:=]?\s*(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb]?)\b/i);
-  let p = priceMatch ? numeric(priceMatch[1]) : simple ? numeric(simple[2]) : candidates.length === 1 ? candidates[0] : NaN;
-  if (!name || !Number.isFinite(p) || p <= 0) return null;
-  if (!priceMatch && !simple && candidates.length !== 1) return null;
-  if (!item && !simple) return null;
-  let tail = clean.replace(new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '');
+
+  // 3. STRICT PRICE SEARCH
+  let price = null;
+
+  // Priority A: Explicit price keywords ("for 15m", "price: 800k", "paying 15m")
+  let priceMatch = cleanNoQty.match(/\b(?:for|price|asking|offer(?:ing)?|paying|sold(?:\s+for)?)\s*[:=]?\s*(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb]?)\b/i);
+  if (priceMatch) {
+    let rawVal = priceMatch[1], val = numeric(rawVal);
+    if (val && (/[kmb]$/i.test(rawVal) \vert{}\vert{} val >= 10000 \vert{}\vert{} /[$₲]|gold|coins/i.test(clean))) {
+      price = val;
+    }
+  }
+
+  // Priority B: Item - Price pattern ("Fatebrand - 15m", "Sigil of Aegis - 1000000")
+  if (!price) {
+    let simple = cleanNoQty.match(/^(?:WTS|WTB|LF|selling|buying)?\s*(.*?)\s+[-–—:=|]\s*(?:for\s*)?(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb]?)\s*$/i);
+    if (simple) {
+      let rawP = simple[2], val = numeric(rawP);
+      // Reject raw numbers under 10000 without k/m/b units (avoids treating inventory count "- 4" as $4 price)
+      if (val && (/[kmb]$/i.test(rawP) || val >= 10000)) {
+        price = val;
+      }
+    }
+  }
+
+  // Priority C: Distinct numeric candidates with explicit k/m/b units
+  if (!price) {
+    let candidates = [...cleanNoQty.matchAll(/(?:^|[\s:=|])(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb])\b/gi)].map(x => numeric(x[1])).filter(v => v > 0);
+    if (candidates.length === 1) price = candidates[0];
+  }
+
+  let name = item?.name;
+  if (!name || !price || price <= 0) return null;
+
+  let tail = cleanNoQty.replace(new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '');
   let enchant = tail.match(/\b(?:enchant(?:ment)?|ench)\s*[:=]\s*([a-z][\w -]*?)(?=\s*[|;,]|\s+(?:attack|defen[cs]e|hp|crit|price)\b|$)/i);
   let rarity = tail.match(/\brarity\s*[:=]\s*(\w+)/i);
   let upgrade = tail.match(/\b(?:upgrade|level)\s*[:=+]?\s*(\d+)\b/i);
   let statMatches = [...tail.matchAll(/\b(attack|atk|defen[cs]e|def|hp|health|crit(?:ical)?(?: chance| damage)?|magic|speed)\s*[:=]\s*\+?(\d+(?:\.\d+)?%?)/gi)];
   let stats = statMatches.map(m => m[1] + ': ' + m[2]).join('\n');
-  return {name, price: p, status: direction, category: item?.category || 'Other', rarity: rarity?.[1] || '', enchantment: enchant?.[1]?.trim() || '', upgrade: upgrade?.[1] || '', stats, source: recordMeta?.source || '', timestamp: recordMeta?.timestamp || '', raw: cleanStr};
+
+  return {name, price, quantity, status: direction, category: item?.category || 'Other', rarity: rarity?.[1] || '', enchantment: enchant?.[1]?.trim() || '', upgrade: upgrade?.[1] || '', stats, source: recordMeta?.source || '', timestamp: recordMeta?.timestamp || '', raw: cleanStr};
 }
 
 let reviewReport = [];
@@ -592,7 +631,7 @@ $('parse').onclick = () => {
           return;
         }
 
-        let dedupKey = [o.name.toLowerCase(), o.price, o.status, o.source, o.timestamp || ''].join('|');
+        let dedupKey = [o.name.toLowerCase(), o.price, o.quantity, o.status, o.source, o.timestamp || ''].join('|');
         let existsInDb = observations.some(obs => {
           let itemName = items.find(it => it.id === obs.item_id)?.name || '';
           return itemName.toLowerCase() === o.name.toLowerCase() && Number(obs.price) === o.price && obs.listing_type === o.status && (obs.observed_at === o.timestamp || obs.source_name === o.source);
@@ -622,7 +661,7 @@ $('parse').onclick = () => {
         return;
       }
 
-      let dedupKey = [o.name.toLowerCase(), o.price, o.status, o.source, o.timestamp || ''].join('|');
+      let dedupKey = [o.name.toLowerCase(), o.price, o.quantity, o.status, o.source, o.timestamp || ''].join('|');
       let existsInDb = observations.some(obs => {
         let itemName = items.find(it => it.id === obs.item_id)?.name || '';
         return itemName.toLowerCase() === o.name.toLowerCase() && Number(obs.price) === o.price && obs.listing_type === o.status && (obs.observed_at === o.timestamp || obs.source_name === o.source);
@@ -642,8 +681,8 @@ $('parse').onclick = () => {
   $('parseStatus').textContent = `${staged.filter(x => !x.isDuplicate).length} new parsed · ${duplicates} duplicates skipped · ${reviewed} need review · ${ignored} ignored.`;
   $('rejected').textContent = reviewReport.map(x => `${x.line} [${x.classification}] ${x.text}`).join('\n');
   $('preview').innerHTML = staged.slice(0, 500).map((o, i) => 
-    `<tr style="${o.isDuplicate ? 'opacity:0.5' : ''}"><td><input type="checkbox" data-check="${i}" ${o.selected ? 'checked' : ''}></td><td>${esc(o.name)}</td><td>${money(o.price)}</td><td>${esc(o.status)}</td><td><small>${esc(fmtTime(o.timestamp))}</small></td><td>${esc([o.rarity, o.enchantment, o.stats].filter(Boolean).join(' · '))}</td><td>${o.isDuplicate ? '<span class="bad">Duplicate</span>' : '<span class="good">New</span>'}</td></tr>`
-  ).join('') + (staged.length > 500 ? '<tr><td colspan="7">Showing first 500.</td></tr>' : '');
+    `<tr style="${o.isDuplicate ? 'opacity:0.5' : ''}"><td><input type="checkbox" data-check="${i}" ${o.selected ? 'checked' : ''}></td><td>${esc(o.name)}</td><td>${money(o.price)}</td><td>${o.quantity || 1}</td><td>${esc(o.status)}</td><td><small>${esc(fmtTime(o.timestamp))}</small></td><td>${esc([o.rarity, o.enchantment, o.stats].filter(Boolean).join(' · '))}</td><td>${o.isDuplicate ? '<span class="bad">Duplicate</span>' : '<span class="good">New</span>'}</td></tr>`
+  ).join('') + (staged.length > 500 ? '<tr><td colspan="8">Showing first 500.</td></tr>' : '');
 
   document.querySelectorAll('[data-check]').forEach(x => x.onchange = () => staged[Number(x.dataset.check)].selected = x.checked);
   $('commit').disabled = !staged.some(x => x.selected);
