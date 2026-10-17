@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pixel Lineage Market & Interactive Price Tracker</title>
+<title>Pixel Lineage Market & Interactive Price Analytics</title>
 <style>
 :root {
   --bg-dark: #0d0b14;
@@ -14,6 +14,7 @@
   --accent-glow: rgba(167, 123, 243, 0.25);
   --buy: #4ade80;
   --sell: #f87171;
+  --sold: #c084fc;
   --text-main: #f1edfa;
   --text-muted: #9e95b0;
   --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -23,21 +24,21 @@
 body { background: var(--bg-dark); color: var(--text-main); font-family: var(--font-family); font-size: 14px; line-height: 1.5; min-height: 100vh; }
 
 /* Header & Nav */
-header { max-width: 1380px; margin: 0 auto; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--panel-border); flex-wrap: wrap; gap: 16px; }
+header { max-width: 1440px; margin: 0 auto; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--panel-border); flex-wrap: wrap; gap: 16px; }
 .logo-title { display: flex; flex-direction: column; }
 .logo-title h1 { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
 .logo-title h1 span { color: var(--accent); }
 .logo-title small { color: var(--text-muted); font-size: 12px; }
 
 .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.pill { border: 1px solid #483a61; background: #1c172d; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--accent); }
+.pill { border: 1px solid #483a61; background: #1c172d; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--accent); }
 
-nav { max-width: 1380px; margin: 16px auto 0; padding: 0 24px; display: flex; gap: 8px; border-bottom: 1px solid var(--panel-border); overflow-x: auto; }
+nav { max-width: 1440px; margin: 16px auto 0; padding: 0 24px; display: flex; gap: 8px; border-bottom: 1px solid var(--panel-border); overflow-x: auto; }
 nav button { background: none; border: none; color: var(--text-muted); padding: 12px 18px; font-weight: 600; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s ease; white-space: nowrap; }
 nav button:hover { color: var(--text-main); }
 nav button.active { color: var(--accent); border-bottom-color: var(--accent); background: linear-gradient(180deg, transparent, rgba(167, 123, 243, 0.08)); }
 
-main { max-width: 1380px; margin: 0 auto; padding: 24px; }
+main { max-width: 1440px; margin: 0 auto; padding: 24px; }
 
 /* Status Notice Banner */
 .notice-banner { background: #1b162a; border: 1px solid var(--panel-border); border-radius: 10px; padding: 12px 18px; margin-bottom: 20px; font-size: 13px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
@@ -52,7 +53,7 @@ main { max-width: 1380px; margin: 0 auto; padding: 24px; }
 .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(167, 123, 243, 0.05); }
 
 /* Stat Cards Top Bar */
-.top-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.top-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .mini-stat { background: var(--card-bg); border: 1px solid var(--panel-border); border-radius: 10px; padding: 14px 16px; }
 .mini-stat .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 600; }
 .mini-stat .val { font-size: 20px; font-weight: 700; color: var(--text-main); margin-top: 4px; }
@@ -79,17 +80,27 @@ td { padding: 12px 16px; border-bottom: 1px solid #231c33; vertical-align: middl
 tr.item-row { cursor: pointer; transition: background 0.15s ease; }
 tr.item-row:hover { background: #231c36 !important; }
 
-/* Tags */
+/* Badges & Tags */
 .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
 .badge-buy { background: rgba(74, 222, 128, 0.15); color: var(--buy); border: 1px solid rgba(74, 222, 128, 0.3); }
 .badge-sell { background: rgba(248, 113, 113, 0.15); color: var(--sell); border: 1px solid rgba(248, 113, 113, 0.3); }
-.badge-sold { background: rgba(167, 123, 243, 0.15); color: var(--accent); border: 1px solid rgba(167, 123, 243, 0.3); }
+.badge-sold { background: rgba(192, 132, 252, 0.15); color: var(--sold); border: 1px solid rgba(192, 132, 252, 0.3); }
+
+.badge-rarity-common { background: rgba(158, 149, 176, 0.15); color: #9e95b0; border: 1px solid #443b59; }
+.badge-rarity-uncommon { background: rgba(74, 222, 128, 0.15); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.3); }
+.badge-rarity-rare { background: rgba(96, 165, 250, 0.15); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.3); }
+.badge-rarity-epic { background: rgba(192, 132, 252, 0.15); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.3); }
+.badge-rarity-legendary { background: rgba(251, 146, 60, 0.15); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.3); }
+.badge-rarity-mythic { background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); }
+
+.substat-tag { display: inline-flex; align-items: center; gap: 4px; background: #241c38; border: 1px solid #3d315b; padding: 2px 7px; border-radius: 6px; font-size: 11px; font-family: monospace; color: #dcd6eb; margin: 2px; }
+.substat-tag .val { color: var(--accent); font-weight: 700; }
 
 /* Item Detail Modal & Auth Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(8, 6, 14, 0.82); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; padding: 20px; }
 .modal-overlay.open { opacity: 1; pointer-events: auto; }
 
-.modal-card { background: #181426; border: 1px solid #3c3154; border-radius: 16px; width: 100%; max-width: 920px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.6); transform: translateY(12px); transition: transform 0.25s ease; }
+.modal-card { background: #181426; border: 1px solid #3c3154; border-radius: 16px; width: 100%; max-width: 980px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.6); transform: translateY(12px); transition: transform 0.25s ease; }
 .modal-overlay.open .modal-card { transform: translateY(0); }
 
 .modal-header { padding: 18px 24px; border-bottom: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center; background: #1c172d; }
@@ -104,13 +115,17 @@ tr.item-row:hover { background: #231c36 !important; }
 .btn:hover { opacity: 0.9; transform: translateY(-1px); }
 .btn-secondary { background: #261f38; border: 1px solid #42365e; color: var(--text-main); }
 .btn-secondary:hover { background: #32294a; }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+/* Substat Dynamic Grid in Editor */
+.substat-builder-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
 </style>
 </head>
 <body>
 <header>
   <div class="logo-title">
     <h1>✦ <span>Pixel Lineage</span> Market</h1>
-    <small>Unified Live Market Tracker & Supabase Price Analytics</small>
+    <small>6-Table Supabase Schema Live Analytics & Equipment Variant Rolls Tracker</small>
   </div>
   <div class="header-actions">
     <span id="identityPill" class="pill">⚡ Supabase: Connecting...</span>
@@ -124,8 +139,10 @@ tr.item-row:hover { background: #231c36 !important; }
 <nav>
   <button data-tab="market" class="active">Market Trends</button>
   <button data-tab="history">Trade Feed</button>
-  <button data-tab="catalogue">Item Catalogue</button>
+  <button data-tab="variants">Equipment Variants</button>
+  <button data-tab="catalogue">Item Rules & Catalogue</button>
   <button data-tab="editor">Manual Listing</button>
+  <button data-tab="batches">Import Batches</button>
   <button data-tab="bulk">Bulk Import to Supabase</button>
 </nav>
 
@@ -133,7 +150,7 @@ tr.item-row:hover { background: #231c36 !important; }
   <!-- Connection Status Banner -->
   <div class="notice-banner" id="noticeBanner">
     <span id="noticeText">Checking Supabase server connection…</span>
-    <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="loadFromSupabase()">🔄 Retry Sync</button>
+    <button class="btn btn-secondary btn-sm" onclick="loadFromSupabase()">🔄 Retry Sync</button>
   </div>
 
   <!-- MARKET TAB -->
@@ -147,6 +164,7 @@ tr.item-row:hover { background: #231c36 !important; }
     <!-- Mini Dashboard Top Bar -->
     <div class="top-stats">
       <div class="mini-stat"><div class="lbl">Unique Items</div><div id="statTotalItems" class="val">—</div></div>
+      <div class="mini-stat"><div class="lbl">Unique Roll Variants</div><div id="statTotalVariants" class="val">—</div></div>
       <div class="mini-stat"><div class="lbl">Active Listings</div><div id="statTotalObs" class="val">—</div></div>
       <div class="mini-stat"><div class="lbl">Buy / Sell Ratio</div><div id="statRatio" class="val">—</div></div>
       <div class="mini-stat"><div class="lbl">Most Traded</div><div id="statTopItem" class="val" style="font-size:15px;color:var(--accent)">—</div></div>
@@ -158,7 +176,7 @@ tr.item-row:hover { background: #231c36 !important; }
 
       <!-- Controls -->
       <div class="controls-grid">
-        <input id="searchInput" placeholder="🔍 Search item name (e.g. Tome of Archon, Fatebrand, Sigil)...">
+        <input id="searchInput" placeholder="🔍 Search item name or equipment substat (e.g. Tome, Fatebrand, Attack, Crit Chance)...">
         <select id="dirFilter">
           <option value="all">All Market Directions</option>
           <option value="sell">Selling Listings Only</option>
@@ -178,13 +196,14 @@ tr.item-row:hover { background: #231c36 !important; }
               <th onclick="sortTable('buy')">Highest Buy Offer ↕</th>
               <th onclick="sortTable('sell')">Lowest Sell Listing ↕</th>
               <th onclick="sortTable('avg')">Avg Price ↕</th>
+              <th onclick="sortTable('variants')">Variants ↕</th>
               <th onclick="sortTable('activity')">Latest Post ↕</th>
               <th onclick="sortTable('count')">Listings ↕</th>
               <th style="text-align:right">Action</th>
             </tr>
           </thead>
           <tbody id="marketTableRows">
-            <tr><td colspan="8" style="text-align:center;padding:30px;" class="muted">Loading market data... Load a CSV file or check Supabase connection.</td></tr>
+            <tr><td colspan="9" style="text-align:center;padding:30px;" class="muted">Loading market data... Load a CSV file or check Supabase connection.</td></tr>
           </tbody>
         </table>
       </div>
@@ -195,19 +214,19 @@ tr.item-row:hover { background: #231c36 !important; }
   <section id="tab-history" class="hide">
     <div class="panel">
       <h2 style="margin-bottom:12px">All Trade Listings Feed</h2>
-      <input id="feedSearch" placeholder="Filter by item, author, or snippet text..." style="margin-bottom:16px" oninput="renderHistory()">
+      <input id="feedSearch" placeholder="Filter by item, author, substat, or snippet text..." style="margin-bottom:16px" oninput="renderHistory()">
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Timestamp</th>
-              <th>Item</th>
+              <th>Item Name</th>
               <th>Category</th>
               <th>Direction</th>
               <th>Price</th>
-              <th>Qty</th>
+              <th>Equipment Roll Substats</th>
               <th>Author / Source</th>
-              <th>Batch ID</th>
+              <th>Batch</th>
               <th>Original Snippet</th>
             </tr>
           </thead>
@@ -217,25 +236,73 @@ tr.item-row:hover { background: #231c36 !important; }
     </div>
   </section>
 
-  <!-- ITEM CATALOGUE TAB -->
-  <section id="tab-catalogue" class="hide">
+  <!-- EQUIPMENT VARIANTS TAB (equipment_variants table) -->
+  <section id="tab-variants" class="hide">
     <div class="panel">
-      <h2 style="margin-bottom:12px">Item Catalogue (items table)</h2>
+      <h2>Equipment Variants Catalogue (<code>equipment_variants</code> table)</h2>
+      <p style="color:var(--text-muted);margin:8px 0 16px;">Tracks specific equipment configurations, substats JSONB, enchantments, upgrade levels (+0 to +10), and rarity tiers to compare identical rolls side-by-side.</p>
+      
+      <input id="variantSearch" placeholder="Filter variants by item, rarity, enchantment, or stat (e.g. Attack: 100, Legendary)..." style="margin-bottom:16px" oninput="renderVariantsTable()">
+      
       <div class="table-wrap">
         <table>
-          <thead><tr><th>ID</th><th>Item Name</th><th>Category</th><th>Description / Status</th><th>Wiki URL</th><th>Created At</th></tr></thead>
-          <tbody id="catalogueTableRows"></tbody>
+          <thead>
+            <tr>
+              <th>Variant ID</th>
+              <th>Item Name</th>
+              <th>Rarity</th>
+              <th>Upgrades</th>
+              <th>Enchantment</th>
+              <th>Substats JSONB Configuration</th>
+              <th>Recorded Trades</th>
+            </tr>
+          </thead>
+          <tbody id="variantsTableRows"></tbody>
         </table>
       </div>
     </div>
   </section>
 
-  <!-- MANUAL OBSERVATION TAB -->
+  <!-- ITEM RULES & CATALOGUE TAB (items, stat_definitions, item_stat_rules) -->
+  <section id="tab-catalogue" class="hide">
+    <div class="panel" style="margin-bottom:20px">
+      <h2 style="margin-bottom:12px">Item Catalogue (<code>items</code> table)</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>Item Name</th><th>Category</th><th>Description / Verification</th><th>Wiki URL</th><th>Created At</th></tr></thead>
+          <tbody id="catalogueTableRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:20px">
+      <h2 style="margin-bottom:12px">Stat Definitions Catalogue (<code>stat_definitions</code> table)</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Code</th><th>Display Name</th><th>Unit</th><th>Description</th><th>Status</th></tr></thead>
+          <tbody id="statDefsTableRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 style="margin-bottom:12px">Verified Item Roll Stat Rules (<code>item_stat_rules</code> table)</h2>
+      <p style="color:var(--text-muted);margin-bottom:12px">Defines valid min/max roll bounds per item to validate CSV imports and detect impossible rolls.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Item ID</th><th>Item Name</th><th>Stat Code</th><th>Min Roll</th><th>Max Roll</th><th>Reference</th></tr></thead>
+          <tbody id="statRulesTableRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- MANUAL OBSERVATION TAB (supports equipment_variants) -->
   <section id="tab-editor" class="hide">
-    <div class="panel" style="max-width:600px;margin:auto;">
+    <div class="panel" style="max-width:680px;margin:auto;">
       <h2 style="margin-bottom:16px">Add Single Market Observation</h2>
       <div style="display:flex;flex-direction:column;gap:12px">
-        <label>Item Name <input id="manualItem" placeholder="e.g. Tome of Archon"></label>
+        <label>Item Name <input id="manualItem" placeholder="e.g. Tome of Archon or Seraph Relic"></label>
         <label>Category <select id="manualCat"></select></label>
         <label>Price (15m, 800k, 12500000) <input id="manualPrice" placeholder="15m"></label>
         <label>Listing Direction 
@@ -246,8 +313,68 @@ tr.item-row:hover { background: #231c36 !important; }
           </select>
         </label>
         <label>Source Author <input id="manualAuthor" placeholder="Discord Username"></label>
+        
+        <!-- Equipment Variant Roll Options -->
+        <div style="background:#13101f;border:1px solid #362c4c;border-radius:10px;padding:14px;margin:6px 0">
+          <label style="font-weight:700;color:var(--accent);display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <input type="checkbox" id="manualHasVariant" onchange="$('variantFieldsBox').classList.toggle('hide', !this.checked)">
+            Include Specific Equipment Roll / Substats (equipment_variants)
+          </label>
+          
+          <div id="variantFieldsBox" class="hide" style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+              <label>Rarity 
+                <select id="manualRarity">
+                  <option value="Common">Common</option>
+                  <option value="Uncommon">Uncommon</option>
+                  <option value="Rare">Rare</option>
+                  <option value="Epic">Epic</option>
+                  <option value="Legendary">Legendary</option>
+                  <option value="Mythic">Mythic</option>
+                </select>
+              </label>
+              <label>Upgrades (+0 to +10) <input id="manualUpgrades" type="number" value="0" min="0" max="10"></label>
+              <label>Enchantment <input id="manualEnchantment" placeholder="e.g. Fire, Lifesteal"></label>
+            </div>
+            
+            <label style="font-weight:600;font-size:12px">Substats (JSONB key-values)</label>
+            <div id="substatContainer">
+              <div class="substat-builder-row">
+                <input placeholder="Stat Name (e.g. Attack)" class="substat-key">
+                <input placeholder="Value (e.g. 100 or 8%)" class="substat-val">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="this.parentElement.remove()">✕</button>
+              </div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" style="width:140px" onclick="addSubstatRow()">+ Add Substat</button>
+          </div>
+        </div>
+
         <label>Raw Snippet <textarea id="manualRaw" placeholder="WTS Tome of Archon 15m"></textarea></label>
         <button id="saveSingleBtn" class="btn">Save & Sync Listing</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- IMPORT BATCHES HISTORY TAB (import_batches table) -->
+  <section id="tab-batches" class="hide">
+    <div class="panel">
+      <h2>Bulk Import Batches History (<code>import_batches</code> table)</h2>
+      <p style="color:var(--text-muted);margin:8px 0 16px;">View all historical bulk import jobs created by admin accounts.</p>
+      
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Batch ID</th>
+              <th>Source Name</th>
+              <th>Imported Snippet / File</th>
+              <th>Created By Account</th>
+              <th>Timestamp</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="importBatchesTableRows"></tbody>
+        </table>
       </div>
     </div>
   </section>
@@ -256,7 +383,7 @@ tr.item-row:hover { background: #231c36 !important; }
   <section id="tab-bulk" class="hide">
     <div class="panel">
       <h2>Bulk Import to Supabase Database</h2>
-      <p style="color:var(--text-muted);margin:8px 0 16px;">Upload or paste CSV text below. Import logging will automatically create an <code>import_batches</code> record and populate <code>price_observations</code> linked via <code>import_batch_id</code>.</p>
+      <p style="color:var(--text-muted);margin:8px 0 16px;">Upload or paste CSV text below. Automatically creates an <code>import_batches</code> record, batch links/creates missing <code>items</code> and <code>equipment_variants</code>, and stores records into <code>price_observations</code>.</p>
       
       <div style="margin-bottom:12px">
         <label style="font-weight:600;margin-bottom:4px;display:block">Batch Source Identifier</label>
@@ -283,7 +410,7 @@ tr.item-row:hover { background: #231c36 !important; }
               <th>Category</th>
               <th>Direction</th>
               <th>Price</th>
-              <th>Qty</th>
+              <th>Equipment Roll Substats</th>
               <th>Author</th>
               <th>Dedupe Key</th>
             </tr>
@@ -324,7 +451,7 @@ tr.item-row:hover { background: #231c36 !important; }
         <span id="modalItemCat" class="badge" style="background:#2b233e;color:var(--accent)">Tome</span>
       </h2>
       <div style="display:flex;align-items:center;gap:10px">
-        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" id="modalCopyBtn">📋 Copy Item Stats</button>
+        <button class="btn btn-secondary btn-sm" id="modalCopyBtn">📋 Copy Item Stats</button>
         <div class="close-btn" id="modalCloseBtn">✕</div>
       </div>
     </div>
@@ -337,6 +464,18 @@ tr.item-row:hover { background: #231c36 !important; }
         <div class="mini-stat"><div class="lbl">Median Market Price</div><div id="mMed" class="val">—</div></div>
         <div class="mini-stat"><div class="lbl">Avg Price</div><div id="mAvg" class="val">—</div></div>
         <div class="mini-stat"><div class="lbl">Total Observations</div><div id="mCount" class="val">—</div></div>
+      </div>
+
+      <!-- Item Roll Rules Box -->
+      <div id="modalRulesBox" style="background:#13101f;border:1px solid #2e2642;border-radius:12px;padding:14px;margin-bottom:16px" class="hide">
+        <h4 style="font-size:13px;color:var(--accent);margin-bottom:8px">Verified Possible Roll Ranges (item_stat_rules)</h4>
+        <div id="modalRulesList" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+
+      <!-- Equipment Variant Substat Filters -->
+      <div id="modalVariantFilterBox" style="background:#13101f;border:1px solid #2e2642;border-radius:12px;padding:14px;margin-bottom:16px" class="hide">
+        <h4 style="font-size:13px;color:var(--accent);margin-bottom:8px">Filter Trades by Equipment Variant Roll</h4>
+        <div id="modalVariantPills" class="pills" style="margin-bottom:0"></div>
       </div>
 
       <!-- Trend Chart Box -->
@@ -357,6 +496,7 @@ tr.item-row:hover { background: #231c36 !important; }
               <th>Timestamp</th>
               <th>Direction</th>
               <th>Price</th>
+              <th>Substats / Roll Variant</th>
               <th>Author / Source</th>
               <th>Batch</th>
               <th>Message Snippet</th>
@@ -382,7 +522,8 @@ const money = n => (n === null || n === undefined || isNaN(n) || n === '' || n =
 const cats = ['ALL', 'Tome', 'Sigil', 'Heartblood', 'Heirloom', 'Material', 'Key', 'Scroll', 'Equipment/Relic', 'Other'];
 
 let client = null, isAdmin = false, currentUser = null;
-let observations = [], items = [], staged = [], activeCategory = 'ALL', activeSortCol = 'count', sortAsc = false, selectedModalItem = null;
+let observations = [], items = [], variants = [], statDefs = [], statRules = [], importBatches = [];
+let staged = [], activeCategory = 'ALL', activeSortCol = 'count', sortAsc = false, selectedModalItem = null, activeModalVariantFilter = 'ALL';
 
 // Initialize Supabase Client
 if (window.supabase && typeof window.supabase.createClient === 'function') {
@@ -413,7 +554,9 @@ document.querySelectorAll('nav button').forEach(btn => {
     let tab = btn.dataset.tab;
     $('tab-' + tab).classList.remove('hide');
     if (tab === 'history') renderHistory();
-    if (tab === 'catalogue') renderCatalogue();
+    if (tab === 'variants') renderVariantsTable();
+    if (tab === 'catalogue') renderCatalogueAndRules();
+    if (tab === 'batches') renderImportBatchesTable();
   };
 });
 
@@ -435,7 +578,47 @@ function fmtTime(t) {
   return d.toISOString().replace('T', ' ').slice(0, 19);
 }
 
-// Robust Multi-line Quote-Aware CSV Parser
+function addSubstatRow(k = '', v = '') {
+  let div = document.createElement('div');
+  div.className = 'substat-builder-row';
+  div.innerHTML = `
+    <input placeholder="Stat Name (e.g. Attack)" class="substat-key" value="${esc(k)}">
+    <input placeholder="Value (e.g. 100 or 8%)" class="substat-val" value="${esc(v)}">
+    <button type="button" class="btn btn-secondary btn-sm" onclick="this.parentElement.remove()">✕</button>
+  `;
+  $('substatContainer').appendChild(div);
+}
+
+function getManualSubstatsJson() {
+  let obj = {};
+  document.querySelectorAll('.substat-builder-row').forEach(r => {
+    let k = r.querySelector('.substat-key').value.trim();
+    let v = r.querySelector('.substat-val').value.trim();
+    if (k) {
+      let num = parseFloat(v);
+      obj[k] = isNaN(num) || String(num) !== v ? v : num;
+    }
+  });
+  return Object.keys(obj).length ? obj : null;
+}
+
+function renderSubstatBadges(substats, rarity = null, upgrades = null, enchantment = null) {
+  let html = '';
+  if (rarity) html += `<span class="badge badge-rarity-${rarity.toLowerCase()}">${esc(rarity)}</span> `;
+  if (upgrades) html += `<span class="badge" style="background:#2b213e;color:var(--accent)">+${upgrades}</span> `;
+  if (enchantment) html += `<span class="badge" style="background:#32203b;color:#f472b6">✨ ${esc(enchantment)}</span> `;
+
+  if (typeof substats === 'object' && substats !== null) {
+    for (let [k, v] of Object.entries(substats)) {
+      html += `<span class="substat-tag">${esc(k)}: <span class="val">${esc(v)}</span></span>`;
+    }
+  } else if (substats) {
+    html += `<small style="color:var(--text-muted)">${esc(substats)}</small>`;
+  }
+  return html || '—';
+}
+
+// Quote-aware CSV Parser
 function parseCSVFull(text) {
   let rows = [], curRow = [], curVal = '', inQuotes = false;
   for (let i = 0; i < text.length; i++) {
@@ -465,8 +648,8 @@ function parsePriceVal(val) {
   return isNaN(num) ? null : num;
 }
 
-function generateDedupeKey(item, listingType, price, author, timestamp) {
-  let raw = `${item.toLowerCase()}|${listingType.toLowerCase()}|${price || 0}|${author.toLowerCase()}|${timestamp}`;
+function generateDedupeKey(item, listingType, price, author, timestamp, substats = '') {
+  let raw = `${item.toLowerCase()}|${listingType.toLowerCase()}|${price || 0}|${author.toLowerCase()}|${timestamp}|${JSON.stringify(substats)}`;
   let hash = 0;
   for (let i = 0; i < raw.length; i++) hash = ((hash << 5) - hash) + raw.charCodeAt(i) | 0;
   return 'dk_' + Math.abs(hash).toString(36);
@@ -476,7 +659,7 @@ function processCSVText(text) {
   let allRows = parseCSVFull(text);
   if (allRows.length < 2) return [];
 
-  let headerCols = allRows[0].map(h => h.toLowerCase());
+  let headerCols = allRows[0].map(h => h.toLowerCase().replace(/[^a-z0-9_]/g, ''));
   
   let idxItem = headerCols.findIndex(h => h === 'item' || h === 'item_name');
   let idxCat = headerCols.findIndex(h => h === 'category');
@@ -488,6 +671,13 @@ function processCSVText(text) {
   let idxAuthor = headerCols.findIndex(h => h === 'author_name' || h === 'author' || h === 'user' || h === 'source_name');
   let idxTime = headerCols.findIndex(h => h === 'timestamp' || h === 'date' || h === 'observed_at');
   let idxText = headerCols.findIndex(h => h === 'original_text' || h === 'content' || h === 'snippet' || h === 'raw_text');
+  
+  // Equipment Variant columns
+  let idxRarity = headerCols.findIndex(h => h === 'rarity');
+  let idxUpgrades = headerCols.findIndex(h => h === 'upgrades' || h === 'upgrade_level');
+  let idxEnchantment = headerCols.findIndex(h => h === 'enchantment');
+  let idxSubstats = headerCols.findIndex(h => h === 'substats' || h === 'substats_json');
+  let idxNotes = headerCols.findIndex(h => h === 'notes');
 
   let rows = [];
   for (let i = 1; i < allRows.length; i++) {
@@ -505,10 +695,20 @@ function processCSVText(text) {
     let ts = idxTime >= 0 ? cols[idxTime] : cols[1] || new Date().toISOString();
     let textSnippet = idxText >= 0 ? cols[idxText] : cols[10] || '';
 
+    let rarity = idxRarity >= 0 ? cols[idxRarity] : null;
+    let upgrades = idxUpgrades >= 0 ? parseInt(cols[idxUpgrades], 10) : 0;
+    let enchantment = idxEnchantment >= 0 ? cols[idxEnchantment] : null;
+    let notes = idxNotes >= 0 ? cols[idxNotes] : null;
+    
+    let substatsObj = null;
+    if (idxSubstats >= 0 && cols[idxSubstats]) {
+      try { substatsObj = JSON.parse(cols[idxSubstats]); } catch(e) { substatsObj = { raw: cols[idxSubstats] }; }
+    }
+
     if (!item || item.toLowerCase() === 'item') continue;
 
     let normType = listingType.toLowerCase().includes('buy') ? 'buy' : listingType.toLowerCase().includes('sold') ? 'sold' : 'sell';
-    let dedupeKey = generateDedupeKey(item, normType, priceP, author, ts);
+    let dedupeKey = generateDedupeKey(item, normType, priceP, author, ts, substatsObj);
 
     rows.push({
       selected: true,
@@ -522,6 +722,11 @@ function processCSVText(text) {
       price: priceP,
       quantity: isNaN(qty) ? 1 : qty,
       original_text: textSnippet,
+      rarity: rarity,
+      upgrades: isNaN(upgrades) ? 0 : upgrades,
+      enchantment: enchantment,
+      substats: substatsObj,
+      notes: notes,
       dedupe_key: dedupeKey,
       confidence: 'parsed'
     });
@@ -529,7 +734,7 @@ function processCSVText(text) {
   return rows;
 }
 
-// Supabase Pagination Fetcher
+// Supabase Fetcher across tables
 async function fetchAllSupabaseRows(tableName) {
   if (!client) return [];
   let rows = [];
@@ -551,33 +756,29 @@ async function loadFromSupabase() {
     return;
   }
   try {
-    notify("Fetching live trade observations from Supabase database...", "info");
+    notify("Fetching live observations & equipment variants from Supabase...", "info");
     
-    // Fetch Items catalogue
     items = await fetchAllSupabaseRows('items');
+    variants = await fetchAllSupabaseRows('equipment_variants');
+    statDefs = await fetchAllSupabaseRows('stat_definitions');
+    statRules = await fetchAllSupabaseRows('item_stat_rules');
+    importBatches = await fetchAllSupabaseRows('import_batches');
 
-    // Attempt fetching from public view or main price_observations table
-    let dbObs = [];
-    if (!isAdmin) {
-      try {
-        let { data, error } = await client.from('public_market_observations').select('*');
-        if (!error && data) dbObs = data;
-      } catch (e) { console.warn('public view query notice:', e); }
-    }
-
-    if (!dbObs || !dbObs.length) {
-      dbObs = await fetchAllSupabaseRows('price_observations');
-    }
+    let dbObs = await fetchAllSupabaseRows('price_observations');
 
     if (dbObs && dbObs.length) {
       let itemMap = new Map(items.map(i => [i.id, i]));
+      let variantMap = new Map(variants.map(v => [v.id, v]));
+
       observations = dbObs.map(o => {
         let it = itemMap.get(o.item_id);
+        let vt = variantMap.get(o.variant_id);
         return {
           id: o.id,
           item_id: o.item_id,
-          item: it?.name || o.item_name || 'Unspecified Item',
-          category: it?.category || o.category || 'Other',
+          variant_id: o.variant_id,
+          item: it?.name || 'Unspecified Item',
+          category: it?.category || 'Other',
           listing_type: o.listing_type || 'sell',
           price: Number(o.price) || null,
           quantity: o.quantity || 1,
@@ -585,17 +786,22 @@ async function loadFromSupabase() {
           author_name: o.source_name || 'Discord',
           original_text: o.raw_text || '',
           import_batch_id: o.import_batch_id || null,
-          variant_id: o.variant_id || null,
-          confidence: o.confidence || 'verified'
+          rarity: vt?.rarity || null,
+          upgrades: vt?.upgrades || 0,
+          enchantment: vt?.enchantment || null,
+          substats: vt?.substats || null,
+          notes: vt?.notes || null
         };
       });
-      notify(`Connected to Supabase · ${items.length} items catalogued · ${observations.length.toLocaleString()} observations loaded live!`, "good");
+      notify(`Connected to Supabase · ${items.length} items · ${variants.length} equipment variants · ${observations.length.toLocaleString()} trade observations loaded live!`, "good");
     } else {
-      notify("Connected to Supabase. Database is currently empty. Use Bulk Import or Load CSV to populate.", "info");
+      notify("Connected to Supabase. Database is empty. Use Bulk Import or Load CSV to populate.", "info");
     }
     render();
     renderHistory();
-    renderCatalogue();
+    renderVariantsTable();
+    renderCatalogueAndRules();
+    renderImportBatchesTable();
   } catch (err) {
     notify(`Supabase connection error: ${err.message}. You can load local CSV files directly below.`, "bad");
   }
@@ -620,7 +826,8 @@ function loadLocalFile(file) {
     observations = processCSVText(ev.target.result);
     render();
     renderHistory();
-    renderCatalogue();
+    renderVariantsTable();
+    renderCatalogueAndRules();
     dropZone.innerHTML = `<span style="color:var(--buy);font-weight:700">✅ Loaded ${observations.length.toLocaleString()} records locally from ${file.name}</span>`;
   };
   reader.readAsText(file);
@@ -638,14 +845,18 @@ function render() {
 
   let itemMap = new Map();
   let totalBuy = 0, totalSell = 0;
+  let uniqueVariantSet = new Set();
 
   for (let o of observations) {
     let key = o.item.toLowerCase();
+    if (o.variant_id || o.substats) uniqueVariantSet.add(o.variant_id || JSON.stringify(o.substats));
+
     if (!itemMap.has(key)) {
-      itemMap.set(key, { name: o.item, category: o.category, buyPrices: [], sellPrices: [], soldPrices: [], allPrices: [], lastTime: o.timestamp, count: 0 });
+      itemMap.set(key, { name: o.item, category: o.category, buyPrices: [], sellPrices: [], soldPrices: [], allPrices: [], variantSet: new Set(), lastTime: o.timestamp, count: 0 });
     }
     let g = itemMap.get(key);
     g.count++;
+    if (o.substats || o.enchantment || o.rarity) g.variantSet.add(JSON.stringify(o.substats || {}));
     if (o.price) g.allPrices.push(o.price);
     if (o.listing_type === 'buy') { totalBuy++; if (o.price) g.buyPrices.push(o.price); }
     if (o.listing_type === 'sell') { totalSell++; if (o.price) g.sellPrices.push(o.price); }
@@ -655,7 +866,9 @@ function render() {
 
   // Top Dashboard Stats
   $('statTotalItems').textContent = itemMap.size.toLocaleString();
-  $('statTotalObs').textContent = observations.length.toLocaleString();$('statRatio').textContent = totalSell ? `${(totalBuy/totalSell).toFixed(2)} Buy/Sell` : '—';
+  $('statTotalVariants').textContent = (variants.length || uniqueVariantSet.size).toLocaleString();
+  $('statTotalObs').textContent = observations.length.toLocaleString();
+  $('statRatio').textContent = totalSell ? `${(totalBuy/totalSell).toFixed(2)} Buy/Sell` : '—';
   
   let topItem = [...itemMap.values()].sort((a,b) => b.count - a.count)[0];
   $('statTopItem').textContent = topItem ? `${topItem.name} (${topItem.count})` : '—';
@@ -684,6 +897,7 @@ function render() {
     else if (activeSortCol === 'buy') res = maxBuyA - maxBuyB;
     else if (activeSortCol === 'sell') res = minSellA - minSellB;
     else if (activeSortCol === 'avg') res = avgA - avgB;
+    else if (activeSortCol === 'variants') res = a.variantSet.size - b.variantSet.size;
     else if (activeSortCol === 'activity') res = new Date(a.lastTime) - new Date(b.lastTime);
     else res = a.count - b.count;
 
@@ -702,17 +916,23 @@ function render() {
         <td style="color:var(--buy);font-weight:700">${money(maxBuy)}</td>
         <td style="color:var(--sell);font-weight:700">${money(minSell)}</td>
         <td style="font-weight:600">${money(avgP)}</td>
+        <td><small class="pill" style="padding:2px 8px">${g.variantSet.size} Roll Variants</small></td>
         <td><small style="color:var(--text-muted)">${esc(fmtTime(g.lastTime))}</small></td>
         <td><b style="color:var(--accent)">${g.count}</b></td>
-        <td style="text-align:right"><button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation(); openDetailModal('${esc(g.name)}')">Details 📊</button></td>
+        <td style="text-align:right"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openDetailModal('${esc(g.name)}')">Details 📊</button></td>
       </tr>
     `;
-  }).join('') || '<tr><td colspan="8" style="text-align:center;padding:30px;" class="muted">No matching items found.</td></tr>';
+  }).join('') || '<tr><td colspan="9" style="text-align:center;padding:30px;" class="muted">No matching items found.</td></tr>';
 }
 
-// Modal Detail Window
+// Modal Detail Window with Equipment Variant Filtering & Stat Rules
 function openDetailModal(itemName) {
   selectedModalItem = itemName;
+  activeModalVariantFilter = 'ALL';
+
+  let itemObj = items.find(i => i.name.toLowerCase() === itemName.toLowerCase());
+  let itemRules = itemObj ? statRules.filter(r => r.item_id === itemObj.id) : [];
+
   let groupObs = observations.filter(o => o.item.toLowerCase() === itemName.toLowerCase())
     .sort((a,b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
 
@@ -722,6 +942,58 @@ function openDetailModal(itemName) {
   $('modalItemTitle').textContent = sample.item;
   $('modalItemCat').textContent = sample.category;
 
+  // Display Item Roll Rules if available
+  let rulesBox = $('modalRulesBox');
+  if (itemRules.length) {
+    rulesBox.classList.remove('hide');
+    $('modalRulesList').innerHTML = itemRules.map(r => `
+      <span class="substat-tag" style="padding:4px 8px">
+        <b>${esc(r.stat_code)}</b> Range: <span class="val">${r.min_value ?? '—'} to ${r.max_value ?? '—'}</span>
+      </span>
+    `).join('');
+  } else {
+    rulesBox.classList.add('hide');
+  }
+
+  // Build Equipment Variant Substat Filters
+  let variantMap = new Map();
+  for (let o of groupObs) {
+    let key = JSON.stringify(o.substats || o.enchantment || o.rarity || 'Base Item');
+    if (!variantMap.has(key)) variantMap.set(key, { label: renderSubstatBadges(o.substats, o.rarity, o.upgrades, o.enchantment), key: key, count: 0 });
+    variantMap.get(key).count++;
+  }
+
+  let variantFilterBox = $('modalVariantFilterBox');
+  if (variantMap.size > 1) {
+    variantFilterBox.classList.remove('hide');
+    $('modalVariantPills').innerHTML = `<button class="pill-btn active" onclick="filterModalByVariant('ALL')">All Variants (${groupObs.length})</button>` +
+      [...variantMap.values()].map(v => `
+        <button class="pill-btn" onclick="filterModalByVariant('${esc(v.key)}')">${v.label} (${v.count})</button>
+      `).join('');
+  } else {
+    variantFilterBox.classList.add('hide');
+  }
+
+  renderModalData(groupObs);
+  $('detailModal').classList.add('open');
+}
+
+function filterModalByVariant(variantKey) {
+  activeModalVariantFilter = variantKey;
+  let groupObs = observations.filter(o => o.item.toLowerCase() === selectedModalItem.toLowerCase())
+    .sort((a,b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+
+  if (variantKey !== 'ALL') {
+    groupObs = groupObs.filter(o => JSON.stringify(o.substats || o.enchantment || o.rarity || 'Base Item') === variantKey);
+  }
+
+  document.querySelectorAll('#modalVariantPills button').forEach(btn => btn.classList.remove('active'));
+  event?.target?.classList?.add('active');
+
+  renderModalData(groupObs);
+}
+
+function renderModalData(groupObs) {
   let buyPrices = groupObs.filter(o => o.listing_type === 'buy' && o.price).map(o => o.price);
   let sellPrices = groupObs.filter(o => o.listing_type === 'sell' && o.price).map(o => o.price);
   let allPrices = groupObs.map(o => o.price).filter(Boolean);
@@ -734,8 +1006,10 @@ function openDetailModal(itemName) {
   let avg = allPrices.length ? allPrices.reduce((s,v)=>s+v,0)/allPrices.length : null;
 
   $('mBuy').textContent = money(maxBuy);
-  $('mSell').textContent = money(minSell);$('mMed').textContent = money(median);
-  $('mAvg').textContent = money(avg);$('mCount').textContent = groupObs.length;
+  $('mSell').textContent = money(minSell);
+  $('mMed').textContent = money(median);
+  $('mAvg').textContent = money(avg);
+  $('mCount').textContent = groupObs.length;
 
   renderModalChart(groupObs, allPrices);
 
@@ -744,19 +1018,18 @@ function openDetailModal(itemName) {
       <td><small style="color:var(--text-muted)">${esc(fmtTime(o.timestamp))}</small></td>
       <td><span class="badge ${o.listing_type === 'buy' ? 'badge-buy' : o.listing_type === 'sold' ? 'badge-sold' : 'badge-sell'}">${o.listing_type}</span></td>
       <td style="font-weight:700;color:${o.listing_type === 'buy' ? 'var(--buy)' : 'var(--sell)'}">${money(o.price)}</td>
+      <td>${renderSubstatBadges(o.substats, o.rarity, o.upgrades, o.enchantment)}</td>
       <td><small>@${esc(o.author_name)}</small></td>
       <td><small class="pill" style="padding:2px 6px">${o.import_batch_id ? '#' + o.import_batch_id : 'Manual'}</small></td>
       <td><small style="color:var(--text-muted)">${esc(o.original_text || '—')}</small></td>
     </tr>
   `).join('');
-
-  $('detailModal').classList.add('open');
 }
 
 function renderModalChart(groupObs, allPrices) {
   let box = $('modalChartBox');
   if (allPrices.length < 2) {
-    box.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted)">Single listing recorded. Need multiple listings for trajectory chart.</div>';
+    box.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted)">Single listing recorded for this variant filter. Need multiple listings for trajectory chart.</div>';
     return;
   }
   let W = 800, H = 160, p = 20;
@@ -775,7 +1048,7 @@ function renderModalChart(groupObs, allPrices) {
 
   let poly = points.map(pt => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
   let dots = points.map(pt => `
-    <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="${pt.type === 'buy' ? '#4ade80' : pt.type === 'sold' ? '#a77bf3' : '#f87171'}">
+    <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="${pt.type === 'buy' ? '#4ade80' : pt.type === 'sold' ? '#c084fc' : '#f87171'}">
       <title>${pt.t} | @${esc(pt.author)}: ${money(pt.price)} (${pt.type.toUpperCase()})</title>
     </circle>
   `).join('');
@@ -789,20 +1062,21 @@ function renderModalChart(groupObs, allPrices) {
   $('chartRange').textContent = `${fmtTime(groupObs[0].timestamp)} → ${fmtTime(groupObs[groupObs.length - 1].timestamp)}`;
 }
 
-$('modalCloseBtn').onclick = () =>$('detailModal').classList.remove('open');
-$('authCloseBtn').onclick = () =>$('authModal').classList.remove('open');
-$('loginBtn').onclick = () =>$('authModal').classList.add('open');
+$('modalCloseBtn').onclick = () => $('detailModal').classList.remove('open');
+$('authCloseBtn').onclick = () => $('authModal').classList.remove('open');
+$('loginBtn').onclick = () => $('authModal').classList.add('open');
 
 // Supabase Auth Login / Logout
 $('signInBtn').onclick = async () => {
   if (!client) return alert('Supabase client not initialized.');
-  let email = $('authEmail').value, password =$('authPassword').value;
+  let email = $('authEmail').value, password = $('authPassword').value;
   $('authMsg').textContent = 'Authenticating...';
   let { data, error } = await client.auth.signInWithPassword({ email, password });
   if (error) {
     $('authMsg').textContent = error.message;
   } else {
-    $('authMsg').textContent = '';$('authModal').classList.remove('open');
+    $('authMsg').textContent = '';
+    $('authModal').classList.remove('open');
     checkUserAuth();
   }
 };
@@ -820,10 +1094,12 @@ async function checkUserAuth() {
     isAdmin = user?.id === ADMIN_ID;
     if (user) {
       $('identityPill').textContent = isAdmin ? '👑 Admin Connected' : `👤 ${user.email}`;
-      $('loginBtn').classList.add('hide');$('logoutBtn').classList.remove('hide');
+      $('loginBtn').classList.add('hide');
+      $('logoutBtn').classList.remove('hide');
     } else {
       $('identityPill').textContent = '⚡ Supabase: Public Viewer';
-      $('loginBtn').classList.remove('hide');$('logoutBtn').classList.add('hide');
+      $('loginBtn').classList.remove('hide');
+      $('logoutBtn').classList.add('hide');
     }
   } catch (err) {
     $('identityPill').textContent = '⚡ Supabase: Public Viewer';
@@ -846,7 +1122,7 @@ $('bulkParseBtn').onclick = async () => {
       <td><small style="color:var(--text-muted)">${esc(row.category)}</small></td>
       <td><span class="badge ${row.listing_type === 'buy' ? 'badge-buy' : row.listing_type === 'sold' ? 'badge-sold' : 'badge-sell'}">${esc(row.listing_type)}</span></td>
       <td style="font-weight:700;color:${row.listing_type === 'buy' ? 'var(--buy)' : 'var(--sell)'}">${money(row.price)}</td>
-      <td>${row.quantity}</td>
+      <td>${renderSubstatBadges(row.substats, row.rarity, row.upgrades, row.enchantment)}</td>
       <td><small style="color:var(--text-muted)">@${esc(row.author_name)}</small></td>
       <td><small style="color:var(--accent);font-family:monospace">${esc(row.dedupe_key)}</small></td>
     </tr>
@@ -859,11 +1135,11 @@ $('bulkParseBtn').onclick = async () => {
     };
   });
 
-  $('bulkStatus').textContent = `Parsed ${staged.length.toLocaleString()} rows cleanly. Ready to store into Supabase database.`;
+  $('bulkStatus').textContent = `Parsed ${staged.length.toLocaleString()} rows cleanly with variant rolls. Ready to store into Supabase database.`;
   $('bulkCommitBtn').disabled = false;
 };
 
-// HIGH-PERFORMANCE BATCH COMMIT MATCHING EXACT SCHEMA (import_batches + price_observations)
+// FULL 6-TABLE BATCH COMMIT (items, equipment_variants, price_observations, import_batches)
 $('bulkCommitBtn').onclick = async () => {
   let selected = staged.filter(s => s.selected);
   if (!selected.length) return alert('No rows selected for import.');
@@ -875,7 +1151,7 @@ $('bulkCommitBtn').onclick = async () => {
 
   if (client) {
     try {
-      // Step 1: Create an entry in import_batches table if permissions allow
+      // Step 1: Create an entry in import_batches
       let importBatchId = null;
       let sourceIdent = $('batchSourceName').value || 'Bulk CSV Import';
       try {
@@ -897,47 +1173,84 @@ $('bulkCommitBtn').onclick = async () => {
         console.warn('import_batches logging bypassed:', e);
       }
 
-      // Step 2: Fetch existing items map
+      // Step 2: Fetch existing items & variants maps
       let { data: existingItems, error: fetchErr } = await client.from('items').select('*');
       if (fetchErr) throw fetchErr;
 
       let itemMap = new Map((existingItems || []).map(i => [i.name.toLowerCase(), i.id]));
 
-      // Step 3: Identify and insert missing items into items table
+      // Step 3: Insert missing items
       let uniqueNewItems = new Map();
       for (let row of selected) {
         let key = row.item.toLowerCase();
         if (!itemMap.has(key) && !uniqueNewItems.has(key)) {
-          uniqueNewItems.set(key, { 
-            name: row.item, 
-            category: row.category, 
-            verification_status: 'Community CSV'
-          });
+          uniqueNewItems.set(key, { name: row.item, category: row.category, verification_status: 'Community CSV' });
         }
       }
 
       if (uniqueNewItems.size > 0) {
-        let newItemsArray = Array.from(uniqueNewItems.values());
         let { data: insertedItems, error: itemInsertErr } = await client.from('items')
-          .insert(newItemsArray)
+          .insert(Array.from(uniqueNewItems.values()))
           .select('id, name');
         
         if (itemInsertErr) throw itemInsertErr;
         if (insertedItems) {
-          for (let it of insertedItems) {
-            itemMap.set(it.name.toLowerCase(), it.id);
+          for (let it of insertedItems) itemMap.set(it.name.toLowerCase(), it.id);
+        }
+      }
+
+      // Step 4: Manage equipment_variants for rows with roll details
+      let { data: existingVariants, error: varErr } = await client.from('equipment_variants').select('*');
+      let variantLookupMap = new Map();
+      if (existingVariants) {
+        for (let v of existingVariants) {
+          let vKey = `${v.item_id}|${v.enchantment || ''}|${v.upgrades || 0}|${v.rarity || ''}|${JSON.stringify(v.substats || {})}`;
+          variantLookupMap.set(vKey, v.id);
+        }
+      }
+
+      let newVariantsToInsert = new Map();
+      for (let row of selected) {
+        let itemId = itemMap.get(row.item.toLowerCase());
+        if (itemId && (row.substats || row.enchantment || row.rarity || row.upgrades > 0)) {
+          let vKey = `${itemId}|${row.enchantment || ''}|${row.upgrades || 0}|${row.rarity || ''}|${JSON.stringify(row.substats || {})}`;
+          if (!variantLookupMap.has(vKey) && !newVariantsToInsert.has(vKey)) {
+            newVariantsToInsert.set(vKey, {
+              item_id: itemId,
+              enchantment: row.enchantment || null,
+              substats: row.substats || null,
+              upgrades: row.upgrades || 0,
+              rarity: row.rarity || null,
+              notes: row.notes || null
+            });
           }
         }
       }
 
-      // Step 4: Build price_observations batch payload according to exact DB columns
+      if (newVariantsToInsert.size > 0) {
+        let { data: insertedVariants, error: varInsertErr } = await client.from('equipment_variants')
+          .insert(Array.from(newVariantsToInsert.values()))
+          .select('id, item_id, enchantment, upgrades, rarity, substats');
+        
+        if (!varInsertErr && insertedVariants) {
+          for (let v of insertedVariants) {
+            let vKey = `${v.item_id}|${v.enchantment || ''}|${v.upgrades || 0}|${v.rarity || ''}|${JSON.stringify(v.substats || {})}`;
+            variantLookupMap.set(vKey, v.id);
+          }
+        }
+      }
+
+      // Step 5: Build price_observations payload with variant_id and import_batch_id
       let obsPayload = [];
       for (let row of selected) {
         let itemId = itemMap.get(row.item.toLowerCase());
         if (itemId) {
+          let vKey = `${itemId}|${row.enchantment || ''}|${row.upgrades || 0}|${row.rarity || ''}|${JSON.stringify(row.substats || {})}`;
+          let variantId = variantLookupMap.get(vKey) || null;
+
           obsPayload.push({
             item_id: itemId,
-            variant_id: null,
+            variant_id: variantId,
             price: row.price,
             quantity: row.quantity || 1,
             listing_type: row.listing_type,
@@ -951,7 +1264,7 @@ $('bulkCommitBtn').onclick = async () => {
         }
       }
 
-      // Step 5: Batch insert into price_observations in chunks of 500
+      // Step 6: Batch insert into price_observations in chunks of 500
       const CHUNK_SIZE = 500;
       let insertedCount = 0;
       for (let i = 0; i < obsPayload.length; i += CHUNK_SIZE) {
@@ -967,7 +1280,7 @@ $('bulkCommitBtn').onclick = async () => {
       switchTab('market');
     } catch (err) {
       console.error('Supabase Commit Error:', err);
-      alert(`Supabase Storage Error: ${err.message || err.details || JSON.stringify(err)}\n\nTip: Ensure you are logged in as Admin or check table RLS policies.`);
+      alert(`Supabase Storage Error: ${err.message || err.details || JSON.stringify(err)}\n\nTip: Ensure you are logged in as Admin.`);
       $('bulkStatus').textContent = `❌ Storage error: ${err.message || 'Failed to sync with Supabase'}`;
       $('bulkCommitBtn').disabled = false;
     }
@@ -976,7 +1289,8 @@ $('bulkCommitBtn').onclick = async () => {
     observations = [...observations, ...selected];
     render();
     renderHistory();
-    renderCatalogue();
+    renderVariantsTable();
+    renderCatalogueAndRules();
     alert(`Successfully loaded ${selected.length.toLocaleString()} rows in local memory!`);
     switchTab('market');
   }
@@ -984,7 +1298,7 @@ $('bulkCommitBtn').onclick = async () => {
 
 function renderHistory() {
   let search = ($('feedSearch')?.value || '').toLowerCase();
-  let filtered = observations.filter(o => !search || o.item.toLowerCase().includes(search) || o.author_name.toLowerCase().includes(search) || o.original_text.toLowerCase().includes(search));
+  let filtered = observations.filter(o => !search || o.item.toLowerCase().includes(search) || o.author_name.toLowerCase().includes(search) || o.original_text.toLowerCase().includes(search) || JSON.stringify(o.substats || {}).toLowerCase().includes(search));
   $('historyTableRows').innerHTML = filtered.map(o => `
     <tr>
       <td><small style="color:var(--text-muted)">${esc(fmtTime(o.timestamp))}</small></td>
@@ -992,7 +1306,7 @@ function renderHistory() {
       <td><small style="color:var(--text-muted)">${esc(o.category)}</small></td>
       <td><span class="badge ${o.listing_type === 'buy' ? 'badge-buy' : o.listing_type === 'sold' ? 'badge-sold' : 'badge-sell'}">${o.listing_type}</span></td>
       <td style="font-weight:700;color:${o.listing_type === 'buy' ? 'var(--buy)' : 'var(--sell)'}">${money(o.price)}</td>
-      <td>${o.quantity || 1}</td>
+      <td>${renderSubstatBadges(o.substats, o.rarity, o.upgrades, o.enchantment)}</td>
       <td><small>@${esc(o.author_name)}</small></td>
       <td><small class="pill" style="padding:2px 6px">${o.import_batch_id ? '#' + o.import_batch_id : 'Manual'}</small></td>
       <td><small style="color:var(--text-muted)">${esc(o.original_text || '—')}</small></td>
@@ -1000,12 +1314,39 @@ function renderHistory() {
   `).join('');
 }
 
-function renderCatalogue() {
+function renderVariantsTable() {
+  let search = ($('variantSearch')?.value || '').toLowerCase();
+  let itemMap = new Map(items.map(i => [i.id, i.name]));
+
+  let obsCountMap = new Map();
+  for (let o of observations) {
+    if (o.variant_id) obsCountMap.set(o.variant_id, (obsCountMap.get(o.variant_id) || 0) + 1);
+  }
+
+  let list = variants.filter(v => {
+    let itemName = itemMap.get(v.item_id) || '';
+    let jsonStr = JSON.stringify(v.substats || {});
+    return !search || itemName.toLowerCase().includes(search) || jsonStr.toLowerCase().includes(search) || (v.rarity || '').toLowerCase().includes(search);
+  });
+
+  $('variantsTableRows').innerHTML = list.map(v => `
+    <tr>
+      <td><small style="color:var(--text-muted)">#${v.id}</small></td>
+      <td><strong>${esc(itemMap.get(v.item_id) || 'Item #' + v.item_id)}</strong></td>
+      <td>${v.rarity ? `<span class="badge badge-rarity-${v.rarity.toLowerCase()}">${esc(v.rarity)}</span>` : '—'}</td>
+      <td><b style="color:var(--accent)">+${v.upgrades || 0}</b></td>
+      <td><small style="color:#f472b6">${esc(v.enchantment || '—')}</small></td>
+      <td>${renderSubstatBadges(v.substats)}</td>
+      <td><b style="color:var(--buy)">${obsCountMap.get(v.id) || 0} Trades</b></td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" style="text-align:center;padding:20px;" class="muted">No equipment variants recorded yet.</td></tr>';
+}
+
+function renderCatalogueAndRules() {
+  // Items Table
   if (items.length) {
     let obsCounts = new Map();
-    for (let o of observations) {
-      if (o.item_id) obsCounts.set(o.item_id, (obsCounts.get(o.item_id) || 0) + 1);
-    }
+    for (let o of observations) if (o.item_id) obsCounts.set(o.item_id, (obsCounts.get(o.item_id) || 0) + 1);
     $('catalogueTableRows').innerHTML = items.map(i => `
       <tr>
         <td><small style="color:var(--text-muted)">#${i.id}</small></td>
@@ -1016,25 +1357,153 @@ function renderCatalogue() {
         <td><small style="color:var(--text-muted)">${fmtTime(i.created_at)}</small></td>
       </tr>
     `).join('');
-  } else {
-    let itemMap = new Map();
-    for (let o of observations) {
-      let key = o.item.toLowerCase();
-      if (!itemMap.has(key)) itemMap.set(key, { name: o.item, category: o.category, count: 0 });
-      itemMap.get(key).count++;
-    }
-    $('catalogueTableRows').innerHTML = [...itemMap.values()].map((i, idx) => `
+  }
+
+  // Stat Definitions Table
+  if (statDefs.length) {
+    $('statDefsTableRows').innerHTML = statDefs.map(s => `
       <tr>
-        <td><small style="color:var(--text-muted)">#${idx + 1}</small></td>
-        <td><strong>${esc(i.name)}</strong></td>
-        <td><span class="badge" style="background:#261f38;color:var(--text-muted)">${esc(i.category)}</span></td>
-        <td><small style="color:var(--text-muted)">Verified · ${i.count} trades</small></td>
-        <td>—</td>
-        <td>—</td>
+        <td><b style="color:var(--accent);font-family:monospace">${esc(s.code)}</b></td>
+        <td><strong>${esc(s.display_name)}</strong></td>
+        <td><small style="color:var(--text-muted)">${esc(s.unit || 'Flat')}</small></td>
+        <td><small style="color:var(--text-muted)">${esc(s.description || '—')}</small></td>
+        <td><span class="badge badge-buy">${s.verified ? 'Verified' : 'Draft'}</span></td>
       </tr>
     `).join('');
+  } else {
+    $('statDefsTableRows').innerHTML = `
+      <tr><td><b style="color:var(--accent)">Attack</b></td><td>Physical / Magical Attack</td><td>Flat</td><td>Bonus damage stat</td><td><span class="badge badge-buy">Verified</span></td></tr>
+      <tr><td><b style="color:var(--accent)">Defence</b></td><td>Damage Reduction Defence</td><td>Flat</td><td>Reduces incoming physical damage</td><td><span class="badge badge-buy">Verified</span></td></tr>
+      <tr><td><b style="color:var(--accent)">Crit Chance</b></td><td>Critical Strike Chance</td><td>Percentage (%)</td><td>Chance to deal critical damage</td><td><span class="badge badge-buy">Verified</span></td></tr>
+      <tr><td><b style="color:var(--accent)">HP</b></td><td>Max Health Points</td><td>Flat</td><td>Increases character max health</td><td><span class="badge badge-buy">Verified</span></td></tr>
+    `;
+  }
+
+  // Item Stat Rules Table
+  let itemMap = new Map(items.map(i => [i.id, i.name]));
+  if (statRules.length) {
+    $('statRulesTableRows').innerHTML = statRules.map(r => `
+      <tr>
+        <td><small style="color:var(--text-muted)">#${r.item_id}</small></td>
+        <td><strong>${esc(itemMap.get(r.item_id) || 'Item #' + r.item_id)}</strong></td>
+        <td><b style="color:var(--accent);font-family:monospace">${esc(r.stat_code)}</b></td>
+        <td><b style="color:var(--buy)">${r.min_value ?? '—'}</b></td>
+        <td><b style="color:var(--sell)">${r.max_value ?? '—'}</b></td>
+        <td><small style="color:var(--text-muted)">${r.source_url ? `<a href="${esc(r.source_url)}" target="_blank" style="color:var(--accent)">Ref ↗</a>` : 'Standard Bounds'}</small></td>
+      </tr>
+    `).join('');
+  } else {
+    $('statRulesTableRows').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;" class="muted">No custom roll bounds configured in item_stat_rules. Defaulting to open ranges.</td></tr>`;
   }
 }
+
+function renderImportBatchesTable() {
+  $('importBatchesTableRows').innerHTML = importBatches.map(b => `
+    <tr>
+      <td><b style="color:var(--accent)">#${b.id}</b></td>
+      <td><strong>${esc(b.source_name)}</strong></td>
+      <td><small style="color:var(--text-muted)">${esc(b.raw_text ? b.raw_text.slice(0, 80) : 'CSV Import Snippet')}</small></td>
+      <td><small style="font-family:monospace;color:var(--text-muted)">${esc(b.created_by || 'Admin')}</small></td>
+      <td><small style="color:var(--text-muted)">${fmtTime(b.created_at)}</small></td>
+      <td><button class="btn btn-secondary btn-sm" onclick="switchTab('history'); $('feedSearch').value='#${b.id}'; renderHistory()">View Trades 🔍</button></td>
+    </tr>
+  `).join('') || `<tr><td colspan="6" style="text-align:center;padding:20px;" class="muted">No import batches recorded in import_batches table yet.</td></tr>`;
+}
+
+// Single Manual Observation Save
+$('saveSingleBtn').onclick = async () => {
+  let itemName = $('manualItem').value.trim();
+  let category = $('manualCat').value;
+  let priceStr = $('manualPrice').value.trim();
+  let dir = $('manualDir').value;
+  let author = $('manualAuthor').value.trim() || 'Manual Input';
+  let rawText = $('manualRaw').value.trim();
+
+  if (!itemName) return alert('Please enter an item name.');
+  let price = parsePriceVal(priceStr);
+
+  let hasVariant = $('manualHasVariant').checked;
+  let rarity = hasVariant ? $('manualRarity').value : null;
+  let upgrades = hasVariant ? parseInt($('manualUpgrades').value, 10) : 0;
+  let enchantment = hasVariant ? $('manualEnchantment').value.trim() : null;
+  let substatsObj = hasVariant ? getManualSubstatsJson() : null;
+
+  if (client && isAdmin) {
+    try {
+      // 1. Get or create item
+      let { data: existingItem } = await client.from('items').select('id').ilike('name', itemName).maybeSingle();
+      let itemId = existingItem?.id;
+      if (!itemId) {
+        let { data: newItem, error: itemErr } = await client.from('items')
+          .insert([{ name: itemName, category: category, verification_status: 'Manual Entry' }])
+          .select('id')
+          .single();
+        if (itemErr) throw itemErr;
+        itemId = newItem.id;
+      }
+
+      // 2. Get or create equipment_variant if requested
+      let variantId = null;
+      if (hasVariant && (substatsObj || enchantment || rarity || upgrades > 0)) {
+        let { data: newVariant, error: varErr } = await client.from('equipment_variants')
+          .insert([{
+            item_id: itemId,
+            rarity: rarity,
+            upgrades: upgrades,
+            enchantment: enchantment,
+            substats: substatsObj
+          }])
+          .select('id')
+          .single();
+        if (varErr) throw varErr;
+        variantId = newVariant.id;
+      }
+
+      // 3. Save price observation
+      let dedupeKey = generateDedupeKey(itemName, dir, price, author, new Date().toISOString(), substatsObj);
+      let { error: obsErr } = await client.from('price_observations').insert([{
+        item_id: itemId,
+        variant_id: variantId,
+        price: price,
+        quantity: 1,
+        listing_type: dir,
+        raw_text: rawText,
+        observed_at: new Date().toISOString(),
+        source_name: author,
+        confidence: 'manual_verified',
+        dedupe_key: dedupeKey
+      }]);
+
+      if (obsErr) throw obsErr;
+
+      alert(`✅ Successfully saved observation for ${itemName}!`);
+      await loadFromSupabase();
+      switchTab('market');
+    } catch (err) {
+      alert(`Error saving listing: ${err.message}`);
+    }
+  } else {
+    // Local memory fallback
+    observations.push({
+      item: itemName,
+      category: category,
+      price: price,
+      listing_type: dir,
+      author_name: author,
+      original_text: rawText,
+      timestamp: new Date().toISOString(),
+      rarity: rarity,
+      upgrades: upgrades,
+      enchantment: enchantment,
+      substats: substatsObj
+    });
+    render();
+    renderHistory();
+    renderVariantsTable();
+    alert(`Added observation for ${itemName} in local memory!`);
+    switchTab('market');
+  }
+};
 
 $('searchInput').oninput = render;
 $('dirFilter').onchange = render;
