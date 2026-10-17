@@ -52,7 +52,7 @@ section{margin-top:16px}
   <div>
     <small>UNOFFICIAL COMMUNITY TRACKER</small>
     <h1>✦ Pixel Lineage Market</h1>
-    <small>Cloud-backed · Individual equipment rolls · No duplicate entries · Precise timestamps</small>
+    <small>Cloud-backed · Chunked Large File Streaming · Zero Overlap Deduplication</small>
   </div>
   <div>
     <span id="identity" class="pill">Public viewer</span>
@@ -73,7 +73,7 @@ section{margin-top:16px}
   <section id="market">
     <div class="panel">
       <h2>Market overview & Price Trends</h2>
-      <p class="muted">Prices are grouped by item and equipment roll. Real-time statistics include Min, Max, Median, Estimates, Timestamps, and Price Trend analysis. Outliers filtered via modified Z-score.</p>
+      <p class="muted">Prices are grouped by item and equipment roll. Real-time statistics include Min, Max, Median, Estimates, Timestamps, and Price Trend analysis.</p>
       <div class="grid">
         <div><label>Search</label><input id="search" placeholder="Tome, sigil, relic, fatebrand…"></div>
         <div><label>Evidence</label>
@@ -191,16 +191,15 @@ section{margin-top:16px}
   <section id="bulk" class="hide">
     <div class="panel">
       <h2>Bulk import</h2>
-      <p class="muted">Supports standardized CSVs and Discord full archive exports (e.g. <code>discord_FullArchive.csv</code>). Automatic deduplication prevents duplicate entries in your database.</p>
+      <p class="muted">Supports standardized CSVs and large Discord exports (any file size). Large files are parsed asynchronously in chunks to prevent UI lockups.</p>
       <label>Paste text or upload a .txt/.csv export</label>
       <input id="bulkFile" type="file" accept=".txt,.csv,.log,text/plain,text/csv">
       <textarea id="bulkText" placeholder="Paste Discord messages or CSV data here."></textarea>
-      <p class="muted">Only known catalogue items or clearly formatted Item - Price entries are auto-accepted. Ambiguous messages are reviewed; ordinary chatter and duplicate messages are ignored.</p>
-      <div class="row">
+      <div class="row" style="margin-top:12px">
         <button id="parse">Preview & Deduplicate</button>
         <button class="primary" id="commit" disabled>Import selected</button>
       </div>
-      <p id="parseStatus"></p>
+      <p id="parseStatus" style="font-weight:bold;color:#c5a3ff"></p>
       <div class="scroll">
         <table>
           <thead><tr><th>Use</th><th>Item</th><th>Price</th><th>Qty</th><th>Type</th><th>Timestamp</th><th>Roll</th><th>Status</th></tr></thead>
@@ -208,7 +207,7 @@ section{margin-top:16px}
         </table>
       </div>
       <details>
-        <summary>Needs review / ignored / duplicates</summary>
+        <summary>Needs review / ignored / duplicates log</summary>
         <pre id="rejected" style="white-space:pre-wrap;max-height:400px;overflow:auto"></pre>
       </details>
       <button id="reviewExport">Download review report</button>
@@ -227,22 +226,6 @@ section{margin-top:16px}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-
-function csv(s) {
-  let a = [], v = '', quote = false;
-  for (let i = 0; i < s.length; i++) {
-    let c = s[i];
-    if (c === '"') {
-      if (quote && s[i + 1] === '"') { v += '"'; i++; }
-      else quote = !quote;
-    } else if (c === ',' && !quote) { a.push(v.trim()); v = ''; }
-    else v += c;
-  }
-  a.push(v.trim());
-  return a;
-}
-
-
 'use strict';
 const URL_BASE = 'https://debencvoeryzbiopeufr.supabase.co';
 const KEY = 'sb_publishable_EnJD8dkQqTQGYZ7B2oHA5A_lIUnb3at';
@@ -254,7 +237,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const money = n => Number(n).toLocaleString('en-US', {maximumFractionDigits: 2});
 const cats = ['Tome','Sigil','Chestplate','Legs','Helmet','Weapon','Relic','Scroll','Material','Consumable','Other'];
 
-let items = [], variants = [], observations = [], admin = false, staged = [], selectedTrendGroup = null;
+let items = [], variants = [], observations = [], admin = false, staged = [], loadedFile = null;
 
 const notice = (s, error = false) => {
   $('notice').textContent = s;
@@ -328,10 +311,8 @@ function renderTrend(groupKey) {
   let minP = Math.min(...prices), maxP = Math.max(...prices);
 
   $('cardAvg').textContent = money(e.avg);
-  $('cardMed').textContent = money(e.median);
-  $('cardMin').textContent = money(minP);
-  $('cardMax').textContent = money(maxP);
-  $('cardCount').textContent = `${groupObs.length} obs`;
+  $('cardMed').textContent = money(e.median);$('cardMin').textContent = money(minP);
+  $('cardMax').textContent = money(maxP);$('cardCount').textContent = `${groupObs.length} obs`;
 
   let trendText = '🟢 Stable';
   if (groupObs.length >= 2) {
@@ -346,7 +327,6 @@ function renderTrend(groupKey) {
     `<tr><td>${esc(fmtTime(o.observed_at))}</td><td>${money(o.price)}</td><td>${esc(o.listing_type)}</td><td>${esc(roll(vm.get(o.variant_id)))}</td><td>${esc(o.source_name || 'Discord')}</td></tr>`
   ).join('');
 
-  // SVG Trend Chart
   let W = 600, H = 140, p = 20;
   if (groupObs.length < 2) {
     $('chartBox').innerHTML = '<p class="muted">Add more price points over time to render a trend chart.</p>';
@@ -389,7 +369,7 @@ function render() {
     groups.get(k).obs.push(o);
   }
 
-  let search = $('search').value.toLowerCase(), type = $('filter').value;
+  let search = $('search').value.toLowerCase(), type =$('filter').value;
   $('marketRows').innerHTML = [...groups.values()].filter(g => g.type === type && g.item?.name.toLowerCase().includes(search)).map(g => {
     let e = estimate(g.prices), minP = Math.min(...g.prices), maxP = Math.max(...g.prices);
     let sortedObs = [...g.obs].sort((a, b) => new Date(b.observed_at || 0) - new Date(a.observed_at || 0));
@@ -437,16 +417,13 @@ async function session() {
   admin = user?.id === ADMIN;
   $('identity').textContent = admin ? 'Admin connected' : 'Public viewer';
   document.querySelectorAll('.admin').forEach(x => x.classList.toggle('hide', !admin));
-  $('loginBtn').classList.toggle('hide', !!user);
-  $('logoutBtn').classList.toggle('hide', !user);
+  $('loginBtn').classList.toggle('hide', !!user);$('logoutBtn').classList.toggle('hide', !user);
   if (user && !admin) notice('This account is not authorised to edit.', true);
   await load();
 }
 
-$('loginBtn').onclick = () => page('auth');
-$('signIn').onclick = async () => {
-  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});
-  $('password').value = '';
+$('loginBtn').onclick = () => page('auth');$('signIn').onclick = async () => {
+  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});$('password').value = '';
   if (error) return notice(error.message, true);
   await session();
   page('market');
@@ -490,20 +467,12 @@ async function guard(fn) {
 }
 
 $('addItem').onclick = () => guard(async () => {
-  let name = $('itemName').value.trim(), url = $('itemWiki').value.trim();
+  let name = $('itemName').value.trim(), url =$('itemWiki').value.trim();
   if (!name) throw Error('Item name required');
   if (url && !/^https:\/\//.test(url)) throw Error('Use an HTTPS wiki URL');
   let {error} = await client.from('items').insert({name, category: $('itemCat').value, wiki_url: url || null, verification_status: 'unverified'});
   if (error) throw error;
   $('itemName').value = '';
-});
-
-$('addObs').onclick = () => guard(async () => {
-  let i = items.find(x => x.id === Number($('obsItem').value)), p = numeric($('obsPrice').value);
-  if (!i || !Number.isFinite(p) || p <= 0) throw Error('Select an item and valid price');
-  await saveObservation({name: i.name, category: i.category, price: p, status: $('obsType').value, rarity: $('rarity').value, enchantment: $('enchant').value, upgrade: $('upgrade').value, stats: $('stats').value, source: $('source').value, raw: $('raw').value});
-  $('obsPrice').value = '';
-  $('raw').value = '';
 });
 
 // RFC-4180 Compliant CSV Parser
@@ -533,7 +502,7 @@ function parseCSV(text) {
 }
 
 function status(s) {
-  return /^(sold|sale|completed)$/i.test(s) ? 'sold' : /^(buy|offer|wtb)$/i.test(s) ? 'buy' : 'sell';
+  return /^(sold|sale|completed)$/i.test(s) ? 'sold' : /^(buy\vert{}offer\vert{}wtb)$/i.test(s) ? 'buy' : 'sell';
 }
 
 function parseLine(line, headers, recordMeta) {
@@ -551,7 +520,7 @@ function parseLine(line, headers, recordMeta) {
 
   let direction = /\b(WTB|LF|buying|looking for)\b/i.test(clean) ? 'buy' : /\b(sold|completed sale|sold for)\b/i.test(clean) ? 'sold' : 'sell';
 
-  // 1. EXTRACT & STRIP QUANTITY FIRST (e.g. "3x", "x12", "qty: 5")
+  // 1. EXTRACT QUANTITY FIRST
   let quantity = 1;
   let qtyMatch = clean.match(/\b(?:(\d+)\s*x|x\s*(\d+)|qty\s*[:=]?\s*(\d+))\b/i);
   if (qtyMatch) {
@@ -566,29 +535,24 @@ function parseLine(line, headers, recordMeta) {
 
   // 3. STRICT PRICE SEARCH
   let price = null;
-
-  // Priority A: Explicit price keywords ("for 15m", "price: 800k", "paying 15m")
   let priceMatch = cleanNoQty.match(/\b(?:for|price|asking|offer(?:ing)?|paying|sold(?:\s+for)?)\s*[:=]?\s*(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb]?)\b/i);
   if (priceMatch) {
     let rawVal = priceMatch[1], val = numeric(rawVal);
-    if (val && (/[kmb]$/i.test(rawVal) || val >= 10000 || /[$₲]|gold|coins/i.test(clean))) {
+    if (val && (/[kmb]$/i.test(rawVal) \vert{}\vert{} val >= 10000 \vert{}\vert{} /[$₲]|gold|coins/i.test(clean))) {
       price = val;
     }
   }
 
-  // Priority B: Item - Price pattern ("Fatebrand - 15m", "Sigil of Aegis - 1000000")
   if (!price) {
     let simple = cleanNoQty.match(/^(?:WTS|WTB|LF|selling|buying)?\s*(.*?)\s+[-–—:=|]\s*(?:for\s*)?(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb]?)\s*$/i);
     if (simple) {
       let rawP = simple[2], val = numeric(rawP);
-      // Reject raw numbers under 10000 without k/m/b units (avoids treating inventory count "- 4" as $4 price)
       if (val && (/[kmb]$/i.test(rawP) || val >= 10000)) {
         price = val;
       }
     }
   }
 
-  // Priority C: Distinct numeric candidates with explicit k/m/b units
   if (!price) {
     let candidates = [...cleanNoQty.matchAll(/(?:^|[\s:=|])(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb])\b/gi)].map(x => numeric(x[1])).filter(v => v > 0);
     if (candidates.length === 1) price = candidates[0];
@@ -609,18 +573,46 @@ function parseLine(line, headers, recordMeta) {
 
 let reviewReport = [];
 
-$('bulkFile').onchange = async e => {
+$('bulkFile').onchange = e => {
   let f = e.target.files?.[0];
   if (!f) return;
-  if (f.size > 25 * 1024 * 1024) { notice('File exceeds 25 MB; split it into smaller exports.', true); return; }
-  $('bulkText').value = await f.text();
-  $('parseStatus').textContent = `Loaded ${f.name} (${f.size.toLocaleString()} bytes). Click Preview.`;
+  loadedFile = f;
+  let sizeMb = (f.size / (1024 * 1024)).toFixed(1);
+  if (f.size > 5 * 1024 * 1024) {
+    $('bulkText').value = `[Loaded ${f.name} (${sizeMb} MB)]\nFile is large. Displaying raw text in text box skipped to prevent UI lag. Click "Preview & Deduplicate" below to stream-parse this file safely.`;
+  } else {
+    let reader = new FileReader();
+    reader.onload = ev => { $('bulkText').value = ev.target.result; };
+    reader.readAsText(f);
+  }
+  $('parseStatus').textContent = `Loaded file: ${f.name} (${sizeMb} MB). Ready to preview.`;
 };
 
-$('parse').onclick = () => {
-  let csvRows = parseCSV($('bulkText').value);
-  if (!csvRows.length) return;
-  
+// CHUNKED ASYNCHRONOUS PARSER
+$('parse').onclick = async () => {$('parse').disabled = true;
+  $('parseStatus').textContent = 'Reading file content into memory…';
+
+  let rawContent = '';
+  if (loadedFile) {
+    rawContent = await loadedFile.text();
+  } else {
+    rawContent = $('bulkText').value;
+  }
+
+  if (!rawContent.trim()) {
+    $('parseStatus').textContent = 'No text or file content found to parse.';$('parse').disabled = false;
+    return;
+  }
+
+  $('parseStatus').textContent = 'Tokenizing CSV / Discord structure…';
+  await new Promise(r => setTimeout(r, 10));
+
+  let csvRows = parseCSV(rawContent);
+  if (!csvRows.length) {
+    $('parseStatus').textContent = 'Failed to find valid rows.';$('parse').disabled = false;
+    return;
+  }
+
   let firstHeader = csvRows[0].map(s => s.toLowerCase().trim());
   let isDiscordExport = firstHeader.includes('content') || firstHeader.includes('message') || firstHeader.includes('author name');
   let isStandardCsv = firstHeader.includes('item') && firstHeader.includes('price');
@@ -628,29 +620,80 @@ $('parse').onclick = () => {
   staged = []; reviewReport = []; let ignored = 0, reviewed = 0, duplicates = 0;
   let seenKeys = new Set();
 
+  let totalRows = isDiscordExport ? csvRows.length - 1 : linesCount(rawContent);
+  let processedCount = 0;
+
   if (isDiscordExport) {
     let contentIdx = firstHeader.findIndex(h => h === 'content' || h === 'message');
     let timeIdx = firstHeader.findIndex(h => h === 'timestamp' || h === 'created_at' || h === 'date');
     let authorIdx = firstHeader.findIndex(h => h === 'author name' || h === 'author' || h === 'channel');
 
-    csvRows.slice(1).forEach((row, i) => {
-      let text = row[contentIdx] || '';
-      let ts = row[timeIdx] || '';
-      let src = row[authorIdx] || 'Discord';
-      let lineNumber = i + 2;
+    let rowsToProcess = csvRows.slice(1);
+    let chunkSize = 2000;
 
-      if (!text.trim()) return;
+    for (let i = 0; i < rowsToProcess.length; i += chunkSize) {
+      let chunk = rowsToProcess.slice(i, i + chunkSize);
+      
+      chunk.forEach((row, idx) => {
+        let text = row[contentIdx] || '';
+        let ts = row[timeIdx] || '';
+        let src = row[authorIdx] || 'Discord';
+        let lineNumber = i + idx + 2;
 
-      let subLines = text.split(/\r?\n/);
-      subLines.forEach(sub => {
-        if (!sub.trim()) return;
-        let o = parseLine(sub, null, {isDiscord: true, timestamp: ts, source: src});
+        if (!text.trim()) return;
+
+        let subLines = text.split(/\r?\n/);
+        subLines.forEach(sub => {
+          if (!sub.trim()) return;
+          let o = parseLine(sub, null, {isDiscord: true, timestamp: ts, source: src});
+          if (!o) {
+            let hasPrice = /\b\d[\d,]*(?:\.\d+)?\s*[kmb]\b|\b(?:price|for|paying|offer)\s*[:=]?\s*\d/i.test(sub);
+            let hasItem = items.some(x => sub.toLowerCase().includes(x.name.toLowerCase()));
+            let classification = hasPrice || hasItem ? 'REVIEW' : 'IGNORED';
+            if (classification === 'REVIEW') reviewed++; else ignored++;
+            reviewReport.push({line: lineNumber, classification, text: sub});
+            return;
+          }
+
+          let dedupKey = [o.name.toLowerCase(), o.price, o.quantity, o.status, o.source, o.timestamp || ''].join('|');
+          let existsInDb = observations.some(obs => {
+            let itemName = items.find(it => it.id === obs.item_id)?.name || '';
+            return itemName.toLowerCase() === o.name.toLowerCase() && Number(obs.price) === o.price && obs.listing_type === o.status && (obs.observed_at === o.timestamp || obs.source_name === o.source);
+          });
+
+          if (seenKeys.has(dedupKey) || existsInDb) {
+            duplicates++;
+            staged.push({...o, selected: false, isDuplicate: true});
+            reviewReport.push({line: lineNumber, classification: 'DUPLICATE', text: sub});
+            return;
+          }
+          seenKeys.add(dedupKey);
+          staged.push({...o, selected: true, isDuplicate: false});
+        });
+      });
+
+      processedCount = Math.min(i + chunkSize, rowsToProcess.length);
+      let pct = Math.round((processedCount / rowsToProcess.length) * 100);
+      $('parseStatus').textContent = `Chunked parsing in progress: ${processedCount.toLocaleString()} / ${rowsToProcess.length.toLocaleString()} rows (${pct}%)…`;
+      await new Promise(r => setTimeout(r, 0)); // Yield to main thread
+    }
+  } else {
+    let lines = rawContent.split(/\r?\n/), headers = isStandardCsv ? firstHeader : null;
+    let linesToProcess = lines.slice(headers ? 1 : 0);
+    let chunkSize = 3000;
+
+    for (let i = 0; i < linesToProcess.length; i += chunkSize) {
+      let chunk = linesToProcess.slice(i, i + chunkSize);
+
+      chunk.forEach((line, idx) => {
+        if (!line.trim()) return;
+        let o = parseLine(line, headers), lineNumber = i + idx + 1 + (headers ? 1 : 0);
         if (!o) {
-          let hasPrice = /\b\d[\d,]*(?:\.\d+)?\s*[kmb]\b|\b(?:price|for|paying|offer)\s*[:=]?\s*\d/i.test(sub);
-          let hasItem = items.some(x => sub.toLowerCase().includes(x.name.toLowerCase()));
+          let hasPrice = /\b\d[\d,]*(?:\.\d+)?\s*[kmb]\b|\b(?:price|for|paying|offer)\s*[:=]?\s*\d/i.test(line);
+          let hasItem = items.some(x => line.toLowerCase().includes(x.name.toLowerCase()));
           let classification = hasPrice || hasItem ? 'REVIEW' : 'IGNORED';
           if (classification === 'REVIEW') reviewed++; else ignored++;
-          reviewReport.push({line: lineNumber, classification, text: sub});
+          reviewReport.push({line: lineNumber, classification, text: line});
           return;
         }
 
@@ -663,53 +706,36 @@ $('parse').onclick = () => {
         if (seenKeys.has(dedupKey) || existsInDb) {
           duplicates++;
           staged.push({...o, selected: false, isDuplicate: true});
-          reviewReport.push({line: lineNumber, classification: 'DUPLICATE', text: sub});
+          reviewReport.push({line: lineNumber, classification: 'DUPLICATE', text: line});
           return;
         }
         seenKeys.add(dedupKey);
         staged.push({...o, selected: true, isDuplicate: false});
       });
-    });
-  } else {
-    let lines = $('bulkText').value.split(/\r?\n/), headers = isStandardCsv ? firstHeader : null;
-    lines.slice(headers ? 1 : 0).forEach((line, i) => {
-      if (!line.trim()) return;
-      let o = parseLine(line, headers), lineNumber = i + 1 + (headers ? 1 : 0);
-      if (!o) {
-        let hasPrice = /\b\d[\d,]*(?:\.\d+)?\s*[kmb]\b|\b(?:price|for|paying|offer)\s*[:=]?\s*\d/i.test(line);
-        let hasItem = items.some(x => line.toLowerCase().includes(x.name.toLowerCase()));
-        let classification = hasPrice || hasItem ? 'REVIEW' : 'IGNORED';
-        if (classification === 'REVIEW') reviewed++; else ignored++;
-        reviewReport.push({line: lineNumber, classification, text: line});
-        return;
-      }
 
-      let dedupKey = [o.name.toLowerCase(), o.price, o.quantity, o.status, o.source, o.timestamp || ''].join('|');
-      let existsInDb = observations.some(obs => {
-        let itemName = items.find(it => it.id === obs.item_id)?.name || '';
-        return itemName.toLowerCase() === o.name.toLowerCase() && Number(obs.price) === o.price && obs.listing_type === o.status && (obs.observed_at === o.timestamp || obs.source_name === o.source);
-      });
-
-      if (seenKeys.has(dedupKey) || existsInDb) {
-        duplicates++;
-        staged.push({...o, selected: false, isDuplicate: true});
-        reviewReport.push({line: lineNumber, classification: 'DUPLICATE', text: line});
-        return;
-      }
-      seenKeys.add(dedupKey);
-      staged.push({...o, selected: true, isDuplicate: false});
-    });
+      processedCount = Math.min(i + chunkSize, linesToProcess.length);
+      let pct = Math.round((processedCount / linesToProcess.length) * 100);
+      $('parseStatus').textContent = `Chunked parsing in progress: ${processedCount.toLocaleString()} / ${linesToProcess.length.toLocaleString()} lines (${pct}%)…`;
+      await new Promise(r => setTimeout(r, 0));
+    }
   }
 
-  $('parseStatus').textContent = `${staged.filter(x => !x.isDuplicate).length} new parsed · ${duplicates} duplicates skipped · ${reviewed} need review · ${ignored} ignored.`;
-  $('rejected').textContent = reviewReport.map(x => `${x.line} [${x.classification}] ${x.text}`).join('\n');
+  $('parseStatus').textContent = `Done! ${staged.filter(x => !x.isDuplicate).length.toLocaleString()} new parsed · ${duplicates.toLocaleString()} duplicates skipped · ${reviewed.toLocaleString()} need review · ${ignored.toLocaleString()} ignored.`;
+  $('rejected').textContent = reviewReport.slice(0, 1000).map(x => `${x.line} [${x.classification}] ${x.text}`).join('\n') + (reviewReport.length > 1000 ? '\n... (showing top 1,000 log entries)' : '');
+  
   $('preview').innerHTML = staged.slice(0, 500).map((o, i) => 
     `<tr style="${o.isDuplicate ? 'opacity:0.5' : ''}"><td><input type="checkbox" data-check="${i}" ${o.selected ? 'checked' : ''}></td><td>${esc(o.name)}</td><td>${money(o.price)}</td><td>${o.quantity || 1}</td><td>${esc(o.status)}</td><td><small>${esc(fmtTime(o.timestamp))}</small></td><td>${esc([o.rarity, o.enchantment, o.stats].filter(Boolean).join(' · '))}</td><td>${o.isDuplicate ? '<span class="bad">Duplicate</span>' : '<span class="good">New</span>'}</td></tr>`
-  ).join('') + (staged.length > 500 ? '<tr><td colspan="8">Showing first 500.</td></tr>' : '');
+  ).join('') + (staged.length > 500 ? '<tr><td colspan="8">Showing first 500 staged rows. All selected entries will be committed.</td></tr>' : '');
 
   document.querySelectorAll('[data-check]').forEach(x => x.onchange = () => staged[Number(x.dataset.check)].selected = x.checked);
-  $('commit').disabled = !staged.some(x => x.selected);
+  $('commit').disabled = !staged.some(x => x.selected);$('parse').disabled = false;
 };
+
+function linesCount(s) {
+  let count = 0;
+  for (let i = 0; i < s.length; i++) if (s[i] === '\n') count++;
+  return count || 1;
+}
 
 $('reviewExport').onclick = () => {
   let blob = new Blob([JSON.stringify({parsed: staged, review: reviewReport}, null, 2)], {type: 'application/json'}), u = URL.createObjectURL(blob), a = document.createElement('a');
@@ -719,21 +745,31 @@ $('reviewExport').onclick = () => {
 $('commit').onclick = () => guard(async () => {
   let selected = staged.filter(o => o.selected);
   if (!selected.length) throw Error('Select some rows');
-  if (!confirm(`Import ${selected.length} observations? This writes to the cloud.`)) return;
+  if (!confirm(`Import ${selected.length.toLocaleString()} observations? This writes directly to Supabase.`)) return;
+  
   let count = 0;
-  for (let o of selected) {
-    try { await saveObservation(o); count++; }
+  $('commit').disabled = true;
+
+  for (let i = 0; i < selected.length; i++) {
+    let o = selected[i];
+    try { 
+      await saveObservation(o); 
+      count++; 
+      if (count % 20 === 0 || count === selected.length) {
+        $('parseStatus').textContent = `Importing to Supabase cloud: ${count.toLocaleString()} / ${selected.length.toLocaleString()} (${Math.round(count / selected.length * 100)}%)…`;
+        await new Promise(r => setTimeout(r, 0));
+      }
+    }
     catch (e) {
-      $('parseStatus').textContent = `Imported ${count}; stopped on row ${count + 1}: ${e.message}. Successfully imported rows are already saved. Do not retry the full batch.`;
+      $('parseStatus').textContent = `Imported ${count}; stopped on row ${count + 1}: ${e.message}. Successfully imported rows are saved.`;
       throw e;
     }
   }
-  staged = []; $('commit').disabled = true;
-  $('parseStatus').textContent = `Imported ${count} observations successfully.`;
+  staged = [];
+  $('parseStatus').textContent = `Import completed! Successfully imported ${count.toLocaleString()} observations to Supabase.`;
 });
 
 session();
-
 </script>
 </body>
 </html>
