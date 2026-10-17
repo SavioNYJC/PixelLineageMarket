@@ -227,6 +227,22 @@ section{margin-top:16px}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
+
+function csv(s) {
+  let a = [], v = '', quote = false;
+  for (let i = 0; i < s.length; i++) {
+    let c = s[i];
+    if (c === '"') {
+      if (quote && s[i + 1] === '"') { v += '"'; i++; }
+      else quote = !quote;
+    } else if (c === ',' && !quote) { a.push(v.trim()); v = ''; }
+    else v += c;
+  }
+  a.push(v.trim());
+  return a;
+}
+
+
 'use strict';
 const URL_BASE = 'https://debencvoeryzbiopeufr.supabase.co';
 const KEY = 'sb_publishable_EnJD8dkQqTQGYZ7B2oHA5A_lIUnb3at';
@@ -312,8 +328,10 @@ function renderTrend(groupKey) {
   let minP = Math.min(...prices), maxP = Math.max(...prices);
 
   $('cardAvg').textContent = money(e.avg);
-  $('cardMed').textContent = money(e.median);$('cardMin').textContent = money(minP);
-  $('cardMax').textContent = money(maxP);$('cardCount').textContent = `${groupObs.length} obs`;
+  $('cardMed').textContent = money(e.median);
+  $('cardMin').textContent = money(minP);
+  $('cardMax').textContent = money(maxP);
+  $('cardCount').textContent = `${groupObs.length} obs`;
 
   let trendText = '🟢 Stable';
   if (groupObs.length >= 2) {
@@ -371,7 +389,7 @@ function render() {
     groups.get(k).obs.push(o);
   }
 
-  let search = $('search').value.toLowerCase(), type =$('filter').value;
+  let search = $('search').value.toLowerCase(), type = $('filter').value;
   $('marketRows').innerHTML = [...groups.values()].filter(g => g.type === type && g.item?.name.toLowerCase().includes(search)).map(g => {
     let e = estimate(g.prices), minP = Math.min(...g.prices), maxP = Math.max(...g.prices);
     let sortedObs = [...g.obs].sort((a, b) => new Date(b.observed_at || 0) - new Date(a.observed_at || 0));
@@ -419,13 +437,16 @@ async function session() {
   admin = user?.id === ADMIN;
   $('identity').textContent = admin ? 'Admin connected' : 'Public viewer';
   document.querySelectorAll('.admin').forEach(x => x.classList.toggle('hide', !admin));
-  $('loginBtn').classList.toggle('hide', !!user);$('logoutBtn').classList.toggle('hide', !user);
+  $('loginBtn').classList.toggle('hide', !!user);
+  $('logoutBtn').classList.toggle('hide', !user);
   if (user && !admin) notice('This account is not authorised to edit.', true);
   await load();
 }
 
-$('loginBtn').onclick = () => page('auth');$('signIn').onclick = async () => {
-  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});$('password').value = '';
+$('loginBtn').onclick = () => page('auth');
+$('signIn').onclick = async () => {
+  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});
+  $('password').value = '';
   if (error) return notice(error.message, true);
   await session();
   page('market');
@@ -469,7 +490,7 @@ async function guard(fn) {
 }
 
 $('addItem').onclick = () => guard(async () => {
-  let name = $('itemName').value.trim(), url =$('itemWiki').value.trim();
+  let name = $('itemName').value.trim(), url = $('itemWiki').value.trim();
   if (!name) throw Error('Item name required');
   if (url && !/^https:\/\//.test(url)) throw Error('Use an HTTPS wiki URL');
   let {error} = await client.from('items').insert({name, category: $('itemCat').value, wiki_url: url || null, verification_status: 'unverified'});
@@ -480,8 +501,9 @@ $('addItem').onclick = () => guard(async () => {
 $('addObs').onclick = () => guard(async () => {
   let i = items.find(x => x.id === Number($('obsItem').value)), p = numeric($('obsPrice').value);
   if (!i || !Number.isFinite(p) || p <= 0) throw Error('Select an item and valid price');
-  await saveObservation({name: i.name, category: i.category, price: p, status: $('obsType').value, rarity: $('rarity').value, enchantment:$('enchant').value, upgrade: $('upgrade').value, stats:$('stats').value, source: $('source').value, raw:$('raw').value});
-  $('obsPrice').value = '';$('raw').value = '';
+  await saveObservation({name: i.name, category: i.category, price: p, status: $('obsType').value, rarity: $('rarity').value, enchantment: $('enchant').value, upgrade: $('upgrade').value, stats: $('stats').value, source: $('source').value, raw: $('raw').value});
+  $('obsPrice').value = '';
+  $('raw').value = '';
 });
 
 // RFC-4180 Compliant CSV Parser
@@ -511,12 +533,12 @@ function parseCSV(text) {
 }
 
 function status(s) {
-  return /^(sold|sale|completed)$/i.test(s) ? 'sold' : /^(buy\vert{}offer\vert{}wtb)$/i.test(s) ? 'buy' : 'sell';
+  return /^(sold|sale|completed)$/i.test(s) ? 'sold' : /^(buy|offer|wtb)$/i.test(s) ? 'buy' : 'sell';
 }
 
 function parseLine(line, headers, recordMeta) {
   if (headers && !recordMeta?.isDiscord) {
-    let vals = Array.isArray(line) ? line : csv(line), o = {};
+    let vals = Array.isArray(line) ? line : parseCSV(line)[0] || [], o = {};
     headers.forEach((h, i) => o[h] = vals[i] || '');
     let p = numeric(o.price);
     if (!o.item || !Number.isFinite(p) || p <= 0) return null;
@@ -549,7 +571,7 @@ function parseLine(line, headers, recordMeta) {
   let priceMatch = cleanNoQty.match(/\b(?:for|price|asking|offer(?:ing)?|paying|sold(?:\s+for)?)\s*[:=]?\s*(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb]?)\b/i);
   if (priceMatch) {
     let rawVal = priceMatch[1], val = numeric(rawVal);
-    if (val && (/[kmb]$/i.test(rawVal) \vert{}\vert{} val >= 10000 \vert{}\vert{} /[$₲]|gold|coins/i.test(clean))) {
+    if (val && (/[kmb]$/i.test(rawVal) || val >= 10000 || /[$₲]|gold|coins/i.test(clean))) {
       price = val;
     }
   }
@@ -591,7 +613,8 @@ $('bulkFile').onchange = async e => {
   let f = e.target.files?.[0];
   if (!f) return;
   if (f.size > 25 * 1024 * 1024) { notice('File exceeds 25 MB; split it into smaller exports.', true); return; }
-  $('bulkText').value = await f.text();$('parseStatus').textContent = `Loaded ${f.name} (${f.size.toLocaleString()} bytes). Click Preview.`;
+  $('bulkText').value = await f.text();
+  $('parseStatus').textContent = `Loaded ${f.name} (${f.size.toLocaleString()} bytes). Click Preview.`;
 };
 
 $('parse').onclick = () => {
@@ -710,6 +733,7 @@ $('commit').onclick = () => guard(async () => {
 });
 
 session();
+
 </script>
 </body>
 </html>
