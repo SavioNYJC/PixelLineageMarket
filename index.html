@@ -554,7 +554,7 @@ function parseCSV(text) {
 }
 
 function status(s) {
-  return /^(sold|sale|completed)$/i.test(s) ? 'sold' : /^(buy\vert{}offer\vert{}wtb)$/i.test(s) ? 'buy' : 'sell';
+  return /^(sold|sale|completed)$/i.test(s) ? 'sold' : /^(buy|offer|wtb)$/i.test(s) ? 'buy' : 'sell';
 }
 
 function parseLine(line, headers, recordMeta) {
@@ -587,7 +587,7 @@ function parseLine(line, headers, recordMeta) {
   let priceMatch = cleanNoQty.match(/\b(?:for|price|asking|offer(?:ing)?|paying|sold(?:\s+for)?)\s*[:=]?\s*(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb]?)\b/i);
   if (priceMatch) {
     let rawVal = priceMatch[1], val = numeric(rawVal);
-    if (val && (/[kmb]$/i.test(rawVal) \vert{}\vert{} val >= 10000 \vert{}\vert{} /[$₲]|gold|coins/i.test(clean))) {
+    if (val && (/[kmb]$/i.test(rawVal) || val >= 10000 || /[$₲]|gold|coins/i.test(clean))) {
       price = val;
     }
   }
