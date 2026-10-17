@@ -83,6 +83,7 @@ tr.item-row:hover { background: #231c36 !important; }
 .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
 .badge-buy { background: rgba(74, 222, 128, 0.15); color: var(--buy); border: 1px solid rgba(74, 222, 128, 0.3); }
 .badge-sell { background: rgba(248, 113, 113, 0.15); color: var(--sell); border: 1px solid rgba(248, 113, 113, 0.3); }
+.badge-sold { background: rgba(167, 123, 243, 0.15); color: var(--accent); border: 1px solid rgba(167, 123, 243, 0.3); }
 
 /* Item Detail Modal & Auth Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(8, 6, 14, 0.82); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; padding: 20px; }
@@ -139,7 +140,7 @@ tr.item-row:hover { background: #231c36 !important; }
   <section id="tab-market">
     <!-- Quick Drag & Drop Bar -->
     <div class="drop-zone" id="dropZone">
-      <span style="font-weight:600;color:var(--accent)">📥 Drag & Drop your cleaned_pixel_lineage_trades_v2.csv file here</span>
+      <span style="font-weight:600;color:var(--accent)">📥 Drag & Drop your trade CSV file here</span>
       <span style="display:block;font-size:12px;color:var(--text-muted);margin-top:4px">or click "Load Local CSV" above to populate trades locally</span>
     </div>
 
@@ -162,6 +163,7 @@ tr.item-row:hover { background: #231c36 !important; }
           <option value="all">All Market Directions</option>
           <option value="sell">Selling Listings Only</option>
           <option value="buy">Buying Offers Only</option>
+          <option value="sold">Sold Trades Only</option>
         </select>
         <button id="copySummaryBtn" class="btn btn-secondary">📋 Copy Market Overview</button>
       </div>
@@ -204,7 +206,8 @@ tr.item-row:hover { background: #231c36 !important; }
               <th>Direction</th>
               <th>Price</th>
               <th>Qty</th>
-              <th>Author</th>
+              <th>Author / Source</th>
+              <th>Batch ID</th>
               <th>Original Snippet</th>
             </tr>
           </thead>
@@ -217,10 +220,10 @@ tr.item-row:hover { background: #231c36 !important; }
   <!-- ITEM CATALOGUE TAB -->
   <section id="tab-catalogue" class="hide">
     <div class="panel">
-      <h2 style="margin-bottom:12px">Item Catalogue</h2>
+      <h2 style="margin-bottom:12px">Item Catalogue (items table)</h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Item Name</th><th>Category</th><th>Total Observations</th><th>Status</th></tr></thead>
+          <thead><tr><th>ID</th><th>Item Name</th><th>Category</th><th>Description / Status</th><th>Wiki URL</th><th>Created At</th></tr></thead>
           <tbody id="catalogueTableRows"></tbody>
         </table>
       </div>
@@ -237,8 +240,9 @@ tr.item-row:hover { background: #231c36 !important; }
         <label>Price (15m, 800k, 12500000) <input id="manualPrice" placeholder="15m"></label>
         <label>Listing Direction 
           <select id="manualDir">
-            <option value="sell">Selling Listing</option>
-            <option value="buy">Buying Offer</option>
+            <option value="sell">Selling Listing (sell)</option>
+            <option value="buy">Buying Offer (buy)</option>
+            <option value="sold">Completed Trade (sold)</option>
           </select>
         </label>
         <label>Source Author <input id="manualAuthor" placeholder="Discord Username"></label>
@@ -252,11 +256,14 @@ tr.item-row:hover { background: #231c36 !important; }
   <section id="tab-bulk" class="hide">
     <div class="panel">
       <h2>Bulk Import to Supabase Database</h2>
-      <p style="color:var(--text-muted);margin:8px 0 16px;">Paste CSV text or upload a CSV file below to parse, deduplicate, and store into your active Supabase database.</p>
+      <p style="color:var(--text-muted);margin:8px 0 16px;">Upload or paste CSV text below. Import logging will automatically create an <code>import_batches</code> record and populate <code>price_observations</code> linked via <code>import_batch_id</code>.</p>
       
       <div style="margin-bottom:12px">
+        <label style="font-weight:600;margin-bottom:4px;display:block">Batch Source Identifier</label>
+        <input id="batchSourceName" placeholder="e.g. Discord #trade-chat CSV Import" value="Discord Trade Scrape" style="margin-bottom:12px">
+        
         <input id="bulkFileInput" type="file" accept=".csv,.txt" style="margin-bottom:8px">
-        <textarea id="bulkPasteText" placeholder="Or paste CSV text here..."></textarea>
+        <textarea id="bulkPasteText" placeholder="Or paste CSV text here..." style="min-height:120px"></textarea>
       </div>
 
       <div style="display:flex;gap:10px;margin-top:12px;align-items:center">
@@ -278,10 +285,11 @@ tr.item-row:hover { background: #231c36 !important; }
               <th>Price</th>
               <th>Qty</th>
               <th>Author</th>
+              <th>Dedupe Key</th>
             </tr>
           </thead>
           <tbody id="bulkPreviewRows">
-            <tr><td colspan="8" style="text-align:center;padding:20px;" class="muted">No rows staged. Upload or paste text above and click "Parse & Stage CSV Rows".</td></tr>
+            <tr><td colspan="9" style="text-align:center;padding:20px;" class="muted">No rows staged. Upload or paste text above and click "Parse & Stage CSV Rows".</td></tr>
           </tbody>
         </table>
       </div>
@@ -349,7 +357,8 @@ tr.item-row:hover { background: #231c36 !important; }
               <th>Timestamp</th>
               <th>Direction</th>
               <th>Price</th>
-              <th>Author</th>
+              <th>Author / Source</th>
+              <th>Batch</th>
               <th>Message Snippet</th>
             </tr>
           </thead>
@@ -372,7 +381,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const money = n => (n === null || n === undefined || isNaN(n) || n === '' || n === 0) ? '—' : Number(n).toLocaleString('en-US', {maximumFractionDigits: 0}) + ' Gold';
 const cats = ['ALL', 'Tome', 'Sigil', 'Heartblood', 'Heirloom', 'Material', 'Key', 'Scroll', 'Equipment/Relic', 'Other'];
 
-let client = null, isAdmin = false;
+let client = null, isAdmin = false, currentUser = null;
 let observations = [], items = [], staged = [], activeCategory = 'ALL', activeSortCol = 'count', sortAsc = false, selectedModalItem = null;
 
 // Initialize Supabase Client
@@ -390,7 +399,8 @@ function switchTab(tabName) {
 }
 
 function notify(text, state = 'info') {
-  let el = $('noticeBanner');$('noticeText').textContent = text;
+  let el = $('noticeBanner');
+  $('noticeText').textContent = text;
   el.className = 'notice-banner ' + (state === 'good' ? 'good' : state === 'bad' ? 'bad' : '');
 }
 
@@ -455,6 +465,13 @@ function parsePriceVal(val) {
   return isNaN(num) ? null : num;
 }
 
+function generateDedupeKey(item, listingType, price, author, timestamp) {
+  let raw = `${item.toLowerCase()}|${listingType.toLowerCase()}|${price || 0}|${author.toLowerCase()}|${timestamp}`;
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) hash = ((hash << 5) - hash) + raw.charCodeAt(i) | 0;
+  return 'dk_' + Math.abs(hash).toString(36);
+}
+
 function processCSVText(text) {
   let allRows = parseCSVFull(text);
   if (allRows.length < 2) return [];
@@ -468,9 +485,9 @@ function processCSVText(text) {
   let idxSell = headerCols.findIndex(h => h === 'sell_price');
   let idxPrice = headerCols.findIndex(h => h === 'price');
   let idxQty = headerCols.findIndex(h => h === 'quantity' || h === 'qty');
-  let idxAuthor = headerCols.findIndex(h => h === 'author_name' || h === 'author' || h === 'user');
-  let idxTime = headerCols.findIndex(h => h === 'timestamp' || h === 'date');
-  let idxText = headerCols.findIndex(h => h === 'original_text' || h === 'content' || h === 'snippet');
+  let idxAuthor = headerCols.findIndex(h => h === 'author_name' || h === 'author' || h === 'user' || h === 'source_name');
+  let idxTime = headerCols.findIndex(h => h === 'timestamp' || h === 'date' || h === 'observed_at');
+  let idxText = headerCols.findIndex(h => h === 'original_text' || h === 'content' || h === 'snippet' || h === 'raw_text');
 
   let rows = [];
   for (let i = 1; i < allRows.length; i++) {
@@ -490,30 +507,38 @@ function processCSVText(text) {
 
     if (!item || item.toLowerCase() === 'item') continue;
 
+    let normType = listingType.toLowerCase().includes('buy') ? 'buy' : listingType.toLowerCase().includes('sold') ? 'sold' : 'sell';
+    let dedupeKey = generateDedupeKey(item, normType, priceP, author, ts);
+
     rows.push({
       selected: true,
       timestamp: ts,
       author_name: author,
       item: item,
       category: category,
-      listing_type: listingType.toLowerCase().includes('buy') ? 'buy' : 'sell',
+      listing_type: normType,
       buy_price: buyP,
       sell_price: sellP,
       price: priceP,
       quantity: isNaN(qty) ? 1 : qty,
-      original_text: textSnippet
+      original_text: textSnippet,
+      dedupe_key: dedupeKey,
+      confidence: 'parsed'
     });
   }
   return rows;
 }
 
 // Supabase Pagination Fetcher
-async function fetchAllSupabaseRows(table) {
+async function fetchAllSupabaseRows(tableName) {
   if (!client) return [];
   let rows = [];
   for (let from = 0; ; from += 1000) {
-    let { data, error } = await client.from(table).select('*').range(from, from + 999);
-    if (error) throw error;
+    let { data, error } = await client.from(tableName).select('*').range(from, from + 999);
+    if (error) {
+      console.warn(`Query on ${tableName} failed:`, error);
+      return rows;
+    }
     if (data) rows.push(...data);
     if (!data || data.length < 1000) break;
   }
@@ -527,8 +552,22 @@ async function loadFromSupabase() {
   }
   try {
     notify("Fetching live trade observations from Supabase database...", "info");
+    
+    // Fetch Items catalogue
     items = await fetchAllSupabaseRows('items');
-    let dbObs = await fetchAllSupabaseRows('price_observations');
+
+    // Attempt fetching from public view or main price_observations table
+    let dbObs = [];
+    if (!isAdmin) {
+      try {
+        let { data, error } = await client.from('public_market_observations').select('*');
+        if (!error && data) dbObs = data;
+      } catch (e) { console.warn('public view query notice:', e); }
+    }
+
+    if (!dbObs || !dbObs.length) {
+      dbObs = await fetchAllSupabaseRows('price_observations');
+    }
 
     if (dbObs && dbObs.length) {
       let itemMap = new Map(items.map(i => [i.id, i]));
@@ -536,14 +575,18 @@ async function loadFromSupabase() {
         let it = itemMap.get(o.item_id);
         return {
           id: o.id,
-          item: it?.name || 'Unspecified Item',
-          category: it?.category || 'Other',
+          item_id: o.item_id,
+          item: it?.name || o.item_name || 'Unspecified Item',
+          category: it?.category || o.category || 'Other',
           listing_type: o.listing_type || 'sell',
           price: Number(o.price) || null,
           quantity: o.quantity || 1,
           timestamp: o.observed_at || o.created_at,
           author_name: o.source_name || 'Discord',
-          original_text: o.raw_text || ''
+          original_text: o.raw_text || '',
+          import_batch_id: o.import_batch_id || null,
+          variant_id: o.variant_id || null,
+          confidence: o.confidence || 'verified'
         };
       });
       notify(`Connected to Supabase · ${items.length} items catalogued · ${observations.length.toLocaleString()} observations loaded live!`, "good");
@@ -599,13 +642,14 @@ function render() {
   for (let o of observations) {
     let key = o.item.toLowerCase();
     if (!itemMap.has(key)) {
-      itemMap.set(key, { name: o.item, category: o.category, buyPrices: [], sellPrices: [], allPrices: [], lastTime: o.timestamp, count: 0 });
+      itemMap.set(key, { name: o.item, category: o.category, buyPrices: [], sellPrices: [], soldPrices: [], allPrices: [], lastTime: o.timestamp, count: 0 });
     }
     let g = itemMap.get(key);
     g.count++;
     if (o.price) g.allPrices.push(o.price);
     if (o.listing_type === 'buy') { totalBuy++; if (o.price) g.buyPrices.push(o.price); }
     if (o.listing_type === 'sell') { totalSell++; if (o.price) g.sellPrices.push(o.price); }
+    if (o.listing_type === 'sold') { if (o.price) g.soldPrices.push(o.price); }
     if (new Date(o.timestamp) > new Date(g.lastTime)) g.lastTime = o.timestamp;
   }
 
@@ -620,6 +664,7 @@ function render() {
     if (activeCategory !== 'ALL' && g.category !== activeCategory) return false;
     if (dir === 'buy' && !g.buyPrices.length) return false;
     if (dir === 'sell' && !g.sellPrices.length) return false;
+    if (dir === 'sold' && !g.soldPrices.length) return false;
     if (search && !g.name.toLowerCase().includes(search)) return false;
     return true;
   });
@@ -697,9 +742,10 @@ function openDetailModal(itemName) {
   $('modalTradeRows').innerHTML = groupObs.slice().reverse().map(o => `
     <tr>
       <td><small style="color:var(--text-muted)">${esc(fmtTime(o.timestamp))}</small></td>
-      <td><span class="badge ${o.listing_type === 'buy' ? 'badge-buy' : 'badge-sell'}">${o.listing_type}</span></td>
+      <td><span class="badge ${o.listing_type === 'buy' ? 'badge-buy' : o.listing_type === 'sold' ? 'badge-sold' : 'badge-sell'}">${o.listing_type}</span></td>
       <td style="font-weight:700;color:${o.listing_type === 'buy' ? 'var(--buy)' : 'var(--sell)'}">${money(o.price)}</td>
       <td><small>@${esc(o.author_name)}</small></td>
+      <td><small class="pill" style="padding:2px 6px">${o.import_batch_id ? '#' + o.import_batch_id : 'Manual'}</small></td>
       <td><small style="color:var(--text-muted)">${esc(o.original_text || '—')}</small></td>
     </tr>
   `).join('');
@@ -729,7 +775,7 @@ function renderModalChart(groupObs, allPrices) {
 
   let poly = points.map(pt => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
   let dots = points.map(pt => `
-    <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="${pt.type === 'buy' ? '#4ade80' : '#a77bf3'}">
+    <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="${pt.type === 'buy' ? '#4ade80' : pt.type === 'sold' ? '#a77bf3' : '#f87171'}">
       <title>${pt.t} | @${esc(pt.author)}: ${money(pt.price)} (${pt.type.toUpperCase()})</title>
     </circle>
   `).join('');
@@ -744,7 +790,7 @@ function renderModalChart(groupObs, allPrices) {
 }
 
 $('modalCloseBtn').onclick = () =>$('detailModal').classList.remove('open');
-$('authCloseBtn').onclick = () =>$('authModal').classList.add('open');
+$('authCloseBtn').onclick = () =>$('authModal').classList.remove('open');
 $('loginBtn').onclick = () =>$('authModal').classList.add('open');
 
 // Supabase Auth Login / Logout
@@ -770,6 +816,7 @@ async function checkUserAuth() {
   if (!client) return;
   try {
     let { data: { user } } = await client.auth.getUser();
+    currentUser = user;
     isAdmin = user?.id === ADMIN_ID;
     if (user) {
       $('identityPill').textContent = isAdmin ? '👑 Admin Connected' : `👤 ${user.email}`;
@@ -797,10 +844,11 @@ $('bulkParseBtn').onclick = async () => {
       <td><small>${esc(fmtTime(row.timestamp))}</small></td>
       <td><strong>${esc(row.item)}</strong></td>
       <td><small style="color:var(--text-muted)">${esc(row.category)}</small></td>
-      <td><span class="badge ${row.listing_type === 'buy' ? 'badge-buy' : 'badge-sell'}">${esc(row.listing_type)}</span></td>
+      <td><span class="badge ${row.listing_type === 'buy' ? 'badge-buy' : row.listing_type === 'sold' ? 'badge-sold' : 'badge-sell'}">${esc(row.listing_type)}</span></td>
       <td style="font-weight:700;color:${row.listing_type === 'buy' ? 'var(--buy)' : 'var(--sell)'}">${money(row.price)}</td>
       <td>${row.quantity}</td>
       <td><small style="color:var(--text-muted)">@${esc(row.author_name)}</small></td>
+      <td><small style="color:var(--accent);font-family:monospace">${esc(row.dedupe_key)}</small></td>
     </tr>
   `).join('');
 
@@ -815,7 +863,7 @@ $('bulkParseBtn').onclick = async () => {
   $('bulkCommitBtn').disabled = false;
 };
 
-// HIGH-PERFORMANCE BATCH COMMIT / STORE INTO SUPABASE DB
+// HIGH-PERFORMANCE BATCH COMMIT MATCHING EXACT SCHEMA (import_batches + price_observations)
 $('bulkCommitBtn').onclick = async () => {
   let selected = staged.filter(s => s.selected);
   if (!selected.length) return alert('No rows selected for import.');
@@ -827,18 +875,44 @@ $('bulkCommitBtn').onclick = async () => {
 
   if (client) {
     try {
-      // Step 1: Fetch existing items map
+      // Step 1: Create an entry in import_batches table if permissions allow
+      let importBatchId = null;
+      let sourceIdent = $('batchSourceName').value || 'Bulk CSV Import';
+      try {
+        let fileInput = $('bulkFileInput');
+        let rawSnippet = fileInput.files?.[0] ? fileInput.files[0].name : $('bulkPasteText').value.slice(0, 500);
+        let { data: batchData, error: batchErr } = await client.from('import_batches')
+          .insert([{
+            source_name: sourceIdent,
+            raw_text: rawSnippet,
+            created_by: currentUser?.id || null
+          }])
+          .select('id')
+          .single();
+        
+        if (!batchErr && batchData) {
+          importBatchId = batchData.id;
+        }
+      } catch (e) {
+        console.warn('import_batches logging bypassed:', e);
+      }
+
+      // Step 2: Fetch existing items map
       let { data: existingItems, error: fetchErr } = await client.from('items').select('*');
       if (fetchErr) throw fetchErr;
 
       let itemMap = new Map((existingItems || []).map(i => [i.name.toLowerCase(), i.id]));
 
-      // Step 2: Identify and insert any missing items in batch
+      // Step 3: Identify and insert missing items into items table
       let uniqueNewItems = new Map();
       for (let row of selected) {
         let key = row.item.toLowerCase();
         if (!itemMap.has(key) && !uniqueNewItems.has(key)) {
-          uniqueNewItems.set(key, { name: row.item, category: row.category, verification_status: 'Community CSV' });
+          uniqueNewItems.set(key, { 
+            name: row.item, 
+            category: row.category, 
+            verification_status: 'Community CSV'
+          });
         }
       }
 
@@ -856,24 +930,28 @@ $('bulkCommitBtn').onclick = async () => {
         }
       }
 
-      // Step 3: Build observations batch payload
+      // Step 4: Build price_observations batch payload according to exact DB columns
       let obsPayload = [];
       for (let row of selected) {
         let itemId = itemMap.get(row.item.toLowerCase());
         if (itemId) {
           obsPayload.push({
             item_id: itemId,
+            variant_id: null,
             price: row.price,
             quantity: row.quantity || 1,
             listing_type: row.listing_type,
-            source_name: row.author_name,
             raw_text: row.original_text,
-            observed_at: row.timestamp
+            observed_at: row.timestamp,
+            import_batch_id: importBatchId,
+            source_name: row.author_name,
+            confidence: row.confidence || 'parsed',
+            dedupe_key: row.dedupe_key
           });
         }
       }
 
-      // Step 4: Batch insert observations in chunks of 500
+      // Step 5: Batch insert into price_observations in chunks of 500
       const CHUNK_SIZE = 500;
       let insertedCount = 0;
       for (let i = 0; i < obsPayload.length; i += CHUNK_SIZE) {
@@ -884,12 +962,12 @@ $('bulkCommitBtn').onclick = async () => {
         $('bulkStatus').textContent = `Stored ${insertedCount.toLocaleString()} / ${obsPayload.length.toLocaleString()} rows in Supabase...`;
       }
 
-      alert(`✅ Successfully stored all ${insertedCount.toLocaleString()} trade listings in Supabase cloud database!`);
+      alert(`✅ Successfully stored all ${insertedCount.toLocaleString()} trade listings in Supabase cloud database!${importBatchId ? ' (Batch #' + importBatchId + ')' : ''}`);
       await loadFromSupabase();
       switchTab('market');
     } catch (err) {
       console.error('Supabase Commit Error:', err);
-      alert(`Supabase Storage Error: ${err.message || err.details || JSON.stringify(err)}\n\nTip: If you encounter an RLS error, log in as Admin.`);
+      alert(`Supabase Storage Error: ${err.message || err.details || JSON.stringify(err)}\n\nTip: Ensure you are logged in as Admin or check table RLS policies.`);
       $('bulkStatus').textContent = `❌ Storage error: ${err.message || 'Failed to sync with Supabase'}`;
       $('bulkCommitBtn').disabled = false;
     }
@@ -912,25 +990,50 @@ function renderHistory() {
       <td><small style="color:var(--text-muted)">${esc(fmtTime(o.timestamp))}</small></td>
       <td><strong>${esc(o.item)}</strong></td>
       <td><small style="color:var(--text-muted)">${esc(o.category)}</small></td>
-      <td><span class="badge ${o.listing_type === 'buy' ? 'badge-buy' : 'badge-sell'}">${o.listing_type}</span></td>
+      <td><span class="badge ${o.listing_type === 'buy' ? 'badge-buy' : o.listing_type === 'sold' ? 'badge-sold' : 'badge-sell'}">${o.listing_type}</span></td>
       <td style="font-weight:700;color:${o.listing_type === 'buy' ? 'var(--buy)' : 'var(--sell)'}">${money(o.price)}</td>
       <td>${o.quantity || 1}</td>
       <td><small>@${esc(o.author_name)}</small></td>
+      <td><small class="pill" style="padding:2px 6px">${o.import_batch_id ? '#' + o.import_batch_id : 'Manual'}</small></td>
       <td><small style="color:var(--text-muted)">${esc(o.original_text || '—')}</small></td>
     </tr>
   `).join('');
 }
 
 function renderCatalogue() {
-  let itemMap = new Map();
-  for (let o of observations) {
-    let key = o.item.toLowerCase();
-    if (!itemMap.has(key)) itemMap.set(key, { name: o.item, category: o.category, count: 0 });
-    itemMap.get(key).count++;
+  if (items.length) {
+    let obsCounts = new Map();
+    for (let o of observations) {
+      if (o.item_id) obsCounts.set(o.item_id, (obsCounts.get(o.item_id) || 0) + 1);
+    }
+    $('catalogueTableRows').innerHTML = items.map(i => `
+      <tr>
+        <td><small style="color:var(--text-muted)">#${i.id}</small></td>
+        <td><strong>${esc(i.name)}</strong></td>
+        <td><span class="badge" style="background:#261f38;color:var(--text-muted)">${esc(i.category)}</span></td>
+        <td><small style="color:var(--text-muted)">${esc(i.verification_status || 'Community')} · ${obsCounts.get(i.id) || 0} trades</small></td>
+        <td><small style="color:var(--accent)">${i.wiki_url ? `<a href="${esc(i.wiki_url)}" target="_blank" style="color:var(--accent)">Wiki Link ↗</a>` : '—'}</small></td>
+        <td><small style="color:var(--text-muted)">${fmtTime(i.created_at)}</small></td>
+      </tr>
+    `).join('');
+  } else {
+    let itemMap = new Map();
+    for (let o of observations) {
+      let key = o.item.toLowerCase();
+      if (!itemMap.has(key)) itemMap.set(key, { name: o.item, category: o.category, count: 0 });
+      itemMap.get(key).count++;
+    }
+    $('catalogueTableRows').innerHTML = [...itemMap.values()].map((i, idx) => `
+      <tr>
+        <td><small style="color:var(--text-muted)">#${idx + 1}</small></td>
+        <td><strong>${esc(i.name)}</strong></td>
+        <td><span class="badge" style="background:#261f38;color:var(--text-muted)">${esc(i.category)}</span></td>
+        <td><small style="color:var(--text-muted)">Verified · ${i.count} trades</small></td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+    `).join('');
   }
-  $('catalogueTableRows').innerHTML = [...itemMap.values()].map(i => `
-    <tr><td><strong>${esc(i.name)}</strong></td><td>${esc(i.category)}</td><td><b>${i.count}</b></td><td><span class="badge badge-buy">Verified</span></td></tr>
-  `).join('');
 }
 
 $('searchInput').oninput = render;
