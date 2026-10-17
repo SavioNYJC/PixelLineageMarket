@@ -108,7 +108,8 @@ function parseLine(line,headers){
 let reviewReport=[];
 $('bulkFile').onchange=async e=>{let f=e.target.files?.[0];if(!f)return;if(f.size>15*1024*1024){notice('File exceeds 15 MB; split it into smaller exports.',true);return}$('bulkText').value=await f.text();$('parseStatus').textContent=`Loaded ${f.name} (${f.size.toLocaleString()} bytes). Click Preview.`};
 $('parse').onclick=()=>{
- let lines=$('bulkText').value.split(/?
+ let lines=$('bulkText').value.split(/
+?
 /),first=csv(lines[0]||'').map(s=>s.toLowerCase().trim()),headers=first.includes('item')&&first.includes('price')?first:null;
  staged=[];reviewReport=[];let ignored=0,reviewed=0,duplicates=0;
  let seenKeys=new Set();
