@@ -384,9 +384,13 @@ if (window.supabase && typeof window.supabase.createClient === 'function') {
   }
 }
 
+function switchTab(tabName) {
+  let targetBtn = document.querySelector(`nav button[data-tab="${tabName}"]`);
+  if (targetBtn) targetBtn.click();
+}
+
 function notify(text, state = 'info') {
-  let el = $('noticeBanner');
-  $('noticeText').textContent = text;
+  let el = $('noticeBanner');$('noticeText').textContent = text;
   el.className = 'notice-banner ' + (state === 'good' ? 'good' : state === 'bad' ? 'bad' : '');
 }
 
@@ -421,23 +425,41 @@ function fmtTime(t) {
   return d.toISOString().replace('T', ' ').slice(0, 19);
 }
 
-function parseCSVLine(line) {
-  let result = [], current = '', inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    let c = line[i];
-    if (c === '"') inQuotes = !inQuotes;
-    else if (c === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
-    else current += c;
+// Robust Multi-line Quote-Aware CSV Parser
+function parseCSVFull(text) {
+  let rows = [], curRow = [], curVal = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    let c = text[i], nextC = text[i+1];
+    if (c === '"') {
+      if (inQuotes && nextC === '"') { curVal += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (c === ',' && !inQuotes) {
+      curRow.push(curVal.trim()); curVal = '';
+    } else if ((c === '\r' || c === '\n') && !inQuotes) {
+      if (c === '\r' && nextC === '\n') i++;
+      curRow.push(curVal.trim()); curVal = '';
+      if (curRow.some(v => v.length > 0)) rows.push(curRow);
+      curRow = [];
+    } else {
+      curVal += c;
+    }
   }
-  result.push(current.trim());
-  return result.map(s => s.replace(/^"|"$/g, '').trim());
+  if (curVal || curRow.length) { curRow.push(curVal.trim()); rows.push(curRow); }
+  return rows;
+}
+
+function parsePriceVal(val) {
+  if (!val) return null;
+  let clean = String(val).replace(/,/g, '').trim();
+  let num = parseFloat(clean);
+  return isNaN(num) ? null : num;
 }
 
 function processCSVText(text) {
-  let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  if (lines.length < 2) return [];
+  let allRows = parseCSVFull(text);
+  if (allRows.length < 2) return [];
 
-  let headerCols = parseCSVLine(lines[0]).map(h => h.toLowerCase());
+  let headerCols = allRows[0].map(h => h.toLowerCase());
   
   let idxItem = headerCols.findIndex(h => h === 'item' || h === 'item_name');
   let idxCat = headerCols.findIndex(h => h === 'category');
@@ -451,16 +473,16 @@ function processCSVText(text) {
   let idxText = headerCols.findIndex(h => h === 'original_text' || h === 'content' || h === 'snippet');
 
   let rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    let cols = parseCSVLine(lines[i]);
+  for (let i = 1; i < allRows.length; i++) {
+    let cols = allRows[i];
     if (cols.length < 3) continue;
 
     let item = idxItem >= 0 ? cols[idxItem] : cols[3] || 'Unspecified Item';
     let category = idxCat >= 0 ? cols[idxCat] : cols[4] || 'Other';
     let listingType = idxType >= 0 ? cols[idxType] : cols[5] || 'sell';
-    let buyP = idxBuy >= 0 ? parseInt(cols[idxBuy], 10) : null;
-    let sellP = idxSell >= 0 ? parseInt(cols[idxSell], 10) : null;
-    let priceP = idxPrice >= 0 ? parseInt(cols[idxPrice], 10) : (buyP || sellP || null);
+    let buyP = idxBuy >= 0 ? parsePriceVal(cols[idxBuy]) : null;
+    let sellP = idxSell >= 0 ? parsePriceVal(cols[idxSell]) : null;
+    let priceP = idxPrice >= 0 ? parsePriceVal(cols[idxPrice]) : (buyP || sellP || null);
     let qty = idxQty >= 0 ? parseInt(cols[idxQty], 10) : 1;
     let author = idxAuthor >= 0 ? cols[idxAuthor] : cols[2] || 'Trader';
     let ts = idxTime >= 0 ? cols[idxTime] : cols[1] || new Date().toISOString();
@@ -475,9 +497,9 @@ function processCSVText(text) {
       item: item,
       category: category,
       listing_type: listingType.toLowerCase().includes('buy') ? 'buy' : 'sell',
-      buy_price: isNaN(buyP) ? null : buyP,
-      sell_price: isNaN(sellP) ? null : sellP,
-      price: isNaN(priceP) ? null : priceP,
+      buy_price: buyP,
+      sell_price: sellP,
+      price: priceP,
       quantity: isNaN(qty) ? 1 : qty,
       original_text: textSnippet
     });
@@ -722,7 +744,7 @@ function renderModalChart(groupObs, allPrices) {
 }
 
 $('modalCloseBtn').onclick = () =>$('detailModal').classList.remove('open');
-$('authCloseBtn').onclick = () =>$('authModal').classList.remove('open');
+$('authCloseBtn').onclick = () =>$('authModal').classList.add('open');
 $('loginBtn').onclick = () =>$('authModal').classList.add('open');
 
 // Supabase Auth Login / Logout
@@ -761,7 +783,7 @@ async function checkUserAuth() {
   }
 }
 
-// Bulk Parse & Store into Supabase
+// Bulk Parse & Stage
 $('bulkParseBtn').onclick = async () => {
   let fileInput = $('bulkFileInput');
   let rawContent = fileInput.files?.[0] ? await fileInput.files[0].text() : $('bulkPasteText').value;
@@ -769,7 +791,7 @@ $('bulkParseBtn').onclick = async () => {
   if (!rawContent.trim()) return alert('Please paste CSV text or select a CSV file first.');
 
   staged = processCSVText(rawContent);
-  $('bulkPreviewRows').innerHTML = staged.slice(0, 300).map((row, i) => `
+  $('bulkPreviewRows').innerHTML = staged.map((row, i) => `
     <tr>
       <td><input type="checkbox" class="chk-staged" data-idx="${i}" ${row.selected ? 'checked' : ''}></td>
       <td><small>${esc(fmtTime(row.timestamp))}</small></td>
@@ -789,11 +811,11 @@ $('bulkParseBtn').onclick = async () => {
     };
   });
 
-  $('bulkStatus').textContent = `Parsed ${staged.length.toLocaleString()} rows. Ready to store into Supabase database.`;
+  $('bulkStatus').textContent = `Parsed ${staged.length.toLocaleString()} rows cleanly. Ready to store into Supabase database.`;
   $('bulkCommitBtn').disabled = false;
 };
 
-// COMMIT / STORE INTO SUPABASE DB
+// HIGH-PERFORMANCE BATCH COMMIT / STORE INTO SUPABASE DB
 $('bulkCommitBtn').onclick = async () => {
   let selected = staged.filter(s => s.selected);
   if (!selected.length) return alert('No rows selected for import.');
@@ -805,27 +827,41 @@ $('bulkCommitBtn').onclick = async () => {
 
   if (client) {
     try {
-      let count = 0;
-      // Step 1: Ensure Catalogue items exist
-      let { data: existingItems } = await client.from('items').select('*');
+      // Step 1: Fetch existing items map
+      let { data: existingItems, error: fetchErr } = await client.from('items').select('*');
+      if (fetchErr) throw fetchErr;
+
       let itemMap = new Map((existingItems || []).map(i => [i.name.toLowerCase(), i.id]));
 
+      // Step 2: Identify and insert any missing items in batch
+      let uniqueNewItems = new Map();
       for (let row of selected) {
         let key = row.item.toLowerCase();
-        let itemId = itemMap.get(key);
+        if (!itemMap.has(key) && !uniqueNewItems.has(key)) {
+          uniqueNewItems.set(key, { name: row.item, category: row.category, verification_status: 'Community CSV' });
+        }
+      }
 
-        if (!itemId) {
-          let { data: newItem, error: errI } = await client.from('items')
-            .insert({ name: row.item, category: row.category, verification_status: 'Community CSV' })
-            .select('id').single();
-          if (newItem) {
-            itemId = newItem.id;
-            itemMap.set(key, itemId);
+      if (uniqueNewItems.size > 0) {
+        let newItemsArray = Array.from(uniqueNewItems.values());
+        let { data: insertedItems, error: itemInsertErr } = await client.from('items')
+          .insert(newItemsArray)
+          .select('id, name');
+        
+        if (itemInsertErr) throw itemInsertErr;
+        if (insertedItems) {
+          for (let it of insertedItems) {
+            itemMap.set(it.name.toLowerCase(), it.id);
           }
         }
+      }
 
+      // Step 3: Build observations batch payload
+      let obsPayload = [];
+      for (let row of selected) {
+        let itemId = itemMap.get(row.item.toLowerCase());
         if (itemId) {
-          await client.from('price_observations').insert({
+          obsPayload.push({
             item_id: itemId,
             price: row.price,
             quantity: row.quantity || 1,
@@ -834,14 +870,28 @@ $('bulkCommitBtn').onclick = async () => {
             raw_text: row.original_text,
             observed_at: row.timestamp
           });
-          count++;
         }
       }
-      alert(`✅ Successfully stored ${count.toLocaleString()} trade listings in Supabase cloud database!`);
+
+      // Step 4: Batch insert observations in chunks of 500
+      const CHUNK_SIZE = 500;
+      let insertedCount = 0;
+      for (let i = 0; i < obsPayload.length; i += CHUNK_SIZE) {
+        let chunk = obsPayload.slice(i, i + CHUNK_SIZE);
+        let { error: obsErr } = await client.from('price_observations').insert(chunk);
+        if (obsErr) throw obsErr;
+        insertedCount += chunk.length;
+        $('bulkStatus').textContent = `Stored ${insertedCount.toLocaleString()} / ${obsPayload.length.toLocaleString()} rows in Supabase...`;
+      }
+
+      alert(`✅ Successfully stored all ${insertedCount.toLocaleString()} trade listings in Supabase cloud database!`);
       await loadFromSupabase();
-      page('market');
+      switchTab('market');
     } catch (err) {
-      alert(`Supabase Storage Error: ${err.message}`);
+      console.error('Supabase Commit Error:', err);
+      alert(`Supabase Storage Error: ${err.message || err.details || JSON.stringify(err)}\n\nTip: If you encounter an RLS error, log in as Admin.`);
+      $('bulkStatus').textContent = `❌ Storage error: ${err.message || 'Failed to sync with Supabase'}`;
+      $('bulkCommitBtn').disabled = false;
     }
   } else {
     // In-memory fallback
@@ -850,13 +900,14 @@ $('bulkCommitBtn').onclick = async () => {
     renderHistory();
     renderCatalogue();
     alert(`Successfully loaded ${selected.length.toLocaleString()} rows in local memory!`);
+    switchTab('market');
   }
 };
 
 function renderHistory() {
   let search = ($('feedSearch')?.value || '').toLowerCase();
   let filtered = observations.filter(o => !search || o.item.toLowerCase().includes(search) || o.author_name.toLowerCase().includes(search) || o.original_text.toLowerCase().includes(search));
-  $('historyTableRows').innerHTML = filtered.slice(0, 300).map(o => `
+  $('historyTableRows').innerHTML = filtered.map(o => `
     <tr>
       <td><small style="color:var(--text-muted)">${esc(fmtTime(o.timestamp))}</small></td>
       <td><strong>${esc(o.item)}</strong></td>
