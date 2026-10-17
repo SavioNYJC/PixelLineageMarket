@@ -245,7 +245,7 @@ try {
   if (window.supabase && typeof window.supabase.createClient === 'function') {
     client = window.supabase.createClient(URL_BASE, KEY);
   } else {
-    notice('Failed to load Supabase SDK from CDN. Please refresh or check connection.', true);
+    notice('Failed to load Supabase SDK from CDN. Check your internet or ad-blocker.', true);
   }
 } catch (err) {
   notice('Supabase Client Init Error: ' + err.message, true);
@@ -324,10 +324,8 @@ function renderTrend(groupKey) {
   let minP = Math.min(...prices), maxP = Math.max(...prices);
 
   $('cardAvg').textContent = money(e.avg);
-  $('cardMed').textContent = money(e.median);
-  $('cardMin').textContent = money(minP);
-  $('cardMax').textContent = money(maxP);
-  $('cardCount').textContent = `${groupObs.length} obs`;
+  $('cardMed').textContent = money(e.median);$('cardMin').textContent = money(minP);
+  $('cardMax').textContent = money(maxP);$('cardCount').textContent = `${groupObs.length} obs`;
 
   let trendText = '🟢 Stable';
   if (groupObs.length >= 2) {
@@ -384,7 +382,7 @@ function render() {
     groups.get(k).obs.push(o);
   }
 
-  let search = $('search').value.toLowerCase(), type = $('filter').value;
+  let search = $('search').value.toLowerCase(), type =$('filter').value;
   $('marketRows').innerHTML = [...groups.values()].filter(g => g.type === type && g.item?.name.toLowerCase().includes(search)).map(g => {
     let e = estimate(g.prices), minP = Math.min(...g.prices), maxP = Math.max(...g.prices);
     let sortedObs = [...g.obs].sort((a, b) => new Date(b.observed_at || 0) - new Date(a.observed_at || 0));
@@ -408,7 +406,7 @@ async function allRows(table, columns = '*') {
 async function load() {
   if (!client) return;
   try {
-    notice('Loading market…');
+    notice('Loading market data…');
     items = await allRows('items');
     variants = await allRows('equipment_variants');
     
@@ -428,39 +426,52 @@ async function load() {
       }
     }
     render();
-    notice(`Connected · ${items.length} items · ${observations.length} observations${admin ? ' · Admin' : ' · Public view'}`);
+    notice(`Connected · ${items.length} items · ${observations.length} observations${admin ? ' · Admin mode' : ' · Public view'}`);
   } catch (e) {
     notice('Cloud load failed: ' + e.message, true);
   }
 }
 
-async function session() {
-  if (!client) return;
+async function init() {
+  if (!client) {
+    notice('Unable to connect to Supabase library. Check connection or ad-blocker.', true);
+    return;
+  }
+
+  // 1. Trigger market load right away (don't block on auth)
+  let dataLoadPromise = load();
+
+  // 2. Auth check with 3-second timeout guard
   try {
-    let {data: {user}} = await client.auth.getUser();
+    let authPromise = client.auth.getUser();
+    let timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Auth check timeout')), 3000));
+    
+    let res = await Promise.race([authPromise, timeoutPromise]);
+    let user = res?.data?.user;
     admin = user?.id === ADMIN;
+
     $('identity').textContent = admin ? 'Admin connected' : 'Public viewer';
     document.querySelectorAll('.admin').forEach(x => x.classList.toggle('hide', !admin));
     $('loginBtn').classList.toggle('hide', !!user);$('logoutBtn').classList.toggle('hide', !user);
-    if (user && !admin) notice('This account is not authorised to edit.', true);
-    await load();
-  } catch (e) {
-    notice('Session Auth Check Failed: ' + e.message, true);
-    await load();
+  } catch (err) {
+    admin = false;
+    $('identity').textContent = 'Public viewer';
   }
+
+  await dataLoadPromise;
 }
 
 $('loginBtn').onclick = () => page('auth');$('signIn').onclick = async () => {
   if (!client) return notice('Supabase client not connected', true);
   let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});$('password').value = '';
   if (error) return notice(error.message, true);
-  await session();
+  await init();
   page('market');
 };
 $('logoutBtn').onclick = async () => {
   if (!client) return;
   await client.auth.signOut();
-  await session();
+  await init();
   page('market');
 };
 
@@ -791,7 +802,8 @@ $('commit').onclick = () => guard(async () => {
   $('parseStatus').textContent = `Import completed! Successfully imported ${count.toLocaleString()} observations to Supabase.`;
 });
 
-session();
+// Run initialization
+init();
 </script>
 </body>
 </html>
