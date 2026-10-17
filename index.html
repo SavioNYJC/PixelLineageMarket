@@ -3,336 +3,358 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pixel Lineage Market & Interactive Price Trends</title>
+<title>Pixel Lineage Market & Interactive Price Tracker</title>
 <style>
-:root{font:15px system-ui, -apple-system, sans-serif;color:#eee;background:#111019;--accent:#c5a3ff;--buy:#4ade80;--sell:#f87171}
-*{box-sizing:border-box}
-body{margin:0}
-header,main{max-width:1280px;margin:auto;padding:22px}
-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid #322b40;padding-bottom:16px}
-h1{margin:0;color:var(--accent);font-size:24px}
-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
-button,input,select,textarea{font:inherit;border-radius:8px;padding:10px;border:1px solid #50465f;background:#272233;color:#fff}
-button{cursor:pointer;background:#7950c5;border:none;font-weight:bold;transition:all 0.2s}
-button:hover{background:#8e62e0}
-button.primary{background:#7950c5}
-button.secondary{background:#3b324a;border:1px solid #57466c}
-button:disabled{opacity:.5;cursor:not-allowed}
-button.sm{padding:6px 12px;font-size:12px}
-input,select{max-width:100%;width:100%}
-textarea{width:100%;min-height:160px}
-label{display:block;color:#c8c0d5;margin:12px 0 5px;font-size:13px;font-weight:600}
-.panel{background:#1c1928;border:1px solid #40364f;border-radius:12px;padding:20px;margin-bottom:16px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-.stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
-.stat-card{background:#252033;border:1px solid #4a3e5e;border-radius:8px;padding:14px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.2)}
-.stat-card .val{font-size:20px;font-weight:bold;color:var(--accent);margin-top:4px}
-.stat-card .lbl{font-size:12px;color:#aaa3b7}
-.hide{display:none!important}
-table{width:100%;border-collapse:collapse;min-width:760px}
-td,th{border-bottom:1px solid #393144;padding:12px;text-align:left;vertical-align:middle}
-th{color:#c7a8fa;background:#252033;font-size:13px;text-transform:uppercase;letter-spacing:0.5px}
-tr.clickable-row{cursor:pointer;transition:background 0.15s ease}
-tr.clickable-row:hover{background:#2e263d!important}
-tr.clickable-row.active-row{background:#382d4d!important;border-left:4px solid var(--accent)}
-.scroll{overflow:auto}
-.muted{color:#aaa3b7}
-.good{color:var(--buy);font-weight:bold}
-.bad{color:var(--sell);font-weight:bold}
-.price-buy{color:var(--buy);font-weight:bold}
-.price-sell{color:var(--sell);font-weight:bold}
-.pill{border:1px solid #57466c;padding:5px 11px;border-radius:20px;font-size:12px}
-a{color:#c9a9ff}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.row>*{flex:1}
-small{color:#aaa3b7}
-#notice{white-space:pre-wrap}
-details{margin:8px 0}
-summary{cursor:pointer;color:var(--accent);font-weight:600}
-section{margin-top:16px}
-.chart-container{background:#15121e;border:1px solid #382e47;border-radius:8px;padding:20px;margin-top:12px}
-.svg-chart{width:100%;height:220px;overflow:visible}
-.tag{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:bold;text-transform:uppercase}
-.tag-buy{background:rgba(74,222,128,0.15);color:var(--buy)}
-.tag-sell{background:rgba(248,113,113,0.15);color:var(--sell)}
-.tag-dup{background:rgba(255,255,255,0.1);color:#888}
+:root {
+  --bg-dark: #0d0b14;
+  --panel-bg: #161322;
+  --panel-border: #2c253d;
+  --card-bg: #1f1a30;
+  --accent: #a77bf3;
+  --accent-glow: rgba(167, 123, 243, 0.25);
+  --buy: #4ade80;
+  --sell: #f87171;
+  --text-main: #f1edfa;
+  --text-muted: #9e95b0;
+  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg-dark); color: var(--text-main); font-family: var(--font-family); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+
+/* Header & Nav */
+header { max-width: 1380px; margin: 0 auto; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--panel-border); flex-wrap: wrap; gap: 16px; }
+.logo-title { display: flex; flex-direction: column; }
+.logo-title h1 { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
+.logo-title h1 span { color: var(--accent); }
+.logo-title small { color: var(--text-muted); font-size: 12px; }
+
+nav { max-width: 1380px; margin: 16px auto 0; padding: 0 24px; display: flex; gap: 8px; border-bottom: 1px solid var(--panel-border); overflow-x: auto; }
+nav button { background: none; border: none; color: var(--text-muted); padding: 12px 18px; font-weight: 600; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s ease; white-space: nowrap; }
+nav button:hover { color: var(--text-main); }
+nav button.active { color: var(--accent); border-bottom-color: var(--accent); background: linear-gradient(180deg, transparent, rgba(167, 123, 243, 0.08)); }
+
+main { max-width: 1380px; margin: 0 auto; padding: 24px; }
+
+/* Panels */
+.panel { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+
+/* Quick Drag Drop Zone */
+.drop-zone { border: 2px dashed #3e3357; border-radius: 10px; padding: 16px; text-align: center; background: rgba(31, 26, 48, 0.4); cursor: pointer; transition: all 0.2s ease; margin-bottom: 20px; }
+.drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(167, 123, 243, 0.05); }
+
+/* Stat Cards Top Bar */
+.top-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.mini-stat { background: var(--card-bg); border: 1px solid var(--panel-border); border-radius: 10px; padding: 14px 16px; }
+.mini-stat .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 600; }
+.mini-stat .val { font-size: 20px; font-weight: 700; color: var(--text-main); margin-top: 4px; }
+
+/* Filter Pills */
+.pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.pill-btn { background: #1c172b; border: 1px solid #332a47; color: var(--text-muted); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.pill-btn:hover { color: #fff; border-color: var(--accent); }
+.pill-btn.active { background: var(--accent); color: #0d0b14; border-color: var(--accent); font-weight: 700; }
+
+/* Search & Inputs */
+.controls-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+@media (max-width: 768px) { .controls-grid { grid-template-columns: 1fr; } }
+
+input, select, textarea { width: 100%; background: #1a1628; border: 1px solid #362c4c; border-radius: 8px; padding: 10px 14px; color: var(--text-main); font-family: inherit; font-size: 13px; outline: none; transition: border-color 0.2s; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+/* Table Styling */
+.table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--panel-border); }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+th { background: #1a1628; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; padding: 12px 16px; border-bottom: 1px solid var(--panel-border); user-select: none; cursor: pointer; }
+th:hover { color: var(--text-main); }
+td { padding: 12px 16px; border-bottom: 1px solid #231c33; vertical-align: middle; }
+tr.item-row { cursor: pointer; transition: background 0.15s ease; }
+tr.item-row:hover { background: #231c36 !important; }
+
+/* Tags */
+.badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.badge-buy { background: rgba(74, 222, 128, 0.15); color: var(--buy); border: 1px solid rgba(74, 222, 128, 0.3); }
+.badge-sell { background: rgba(248, 113, 113, 0.15); color: var(--sell); border: 1px solid rgba(248, 113, 113, 0.3); }
+
+/* Item Detail Modal Overlay */
+.modal-overlay { position: fixed; inset: 0; background: rgba(8, 6, 14, 0.82); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; padding: 20px; }
+.modal-overlay.open { opacity: 1; pointer-events: auto; }
+
+.modal-card { background: #181426; border: 1px solid #3c3154; border-radius: 16px; width: 100%; max-width: 920px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.6); transform: translateY(12px); transition: transform 0.25s ease; }
+.modal-overlay.open .modal-card { transform: translateY(0); }
+
+.modal-header { padding: 18px 24px; border-bottom: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center; background: #1c172d; }
+.modal-header h2 { font-size: 20px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
+.modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+
+.close-btn { background: #2b233e; border: 1px solid #443761; color: var(--text-muted); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: all 0.2s; }
+.close-btn:hover { background: #3c3058; color: #fff; }
+
+.hide { display: none !important; }
+.btn { background: var(--accent); color: #0d0b14; font-weight: 700; border: none; padding: 9px 18px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+.btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-secondary { background: #261f38; border: 1px solid #42365e; color: var(--text-main); }
+.btn-secondary:hover { background: #32294a; }
 </style>
 </head>
 <body>
 <header>
-  <div>
-    <small style="color:#a39bb0;letter-spacing:1px;font-weight:bold">PIXEL LINEAGE MARKET TRACKER</small>
-    <h1>✦ Pixel Lineage Market</h1>
-    <small>Unified Live Market · Zero Overlap Deduplication · Side-by-Side Buy/Sell Pricing</small>
+  <div class="logo-title">
+    <h1>✦ <span>Pixel Lineage</span> Market</h1>
+    <small>Unified Live Market Tracker & Price Analytics</small>
   </div>
-  <div class="row" style="flex:initial;gap:8px">
-    <span id="identity" class="pill">Public Viewer</span>
-    <button id="loginBtn" class="sm secondary">Admin Login</button>
-    <button id="logoutBtn" class="sm secondary hide">Sign Out</button>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <button class="btn btn-secondary" onclick="$('localCsvFile').click()">📁 Load CSV Data</button>
+    <input type="file" id="localCsvFile" accept=".csv" style="display:none">
   </div>
 </header>
 
+<nav>
+  <button data-tab="market" class="active">Market Trends</button>
+  <button data-tab="history">Trade Feed</button>
+  <button data-tab="catalogue">Item Catalogue</button>
+  <button data-tab="editor">Manual Listing</button>
+  <button data-tab="bulk">Bulk Import</button>
+</nav>
+
 <main>
-  <div id="notice" class="panel muted">Checking Supabase server connection…</div>
+  <!-- MARKET TAB -->
+  <section id="tab-market">
+    <!-- Quick Drag & Drop Bar -->
+    <div class="drop-zone" id="dropZone">
+      <span style="font-weight:600;color:var(--accent)">📥 Drag & Drop your cleaned_pixel_lineage_trades_v2.csv file here</span>
+      <span style="display:block;font-size:12px;color:var(--text-muted);margin-top:4px">or click "Load CSV Data" above to instantly populate 3,000+ trades</span>
+    </div>
 
-  <nav>
-    <button data-page="market" class="primary">Market Trends</button>
-    <button data-page="history">All Trade Listings</button>
-    <button data-page="catalogue">Item Catalogue</button>
-    <button data-page="editor">Add Listing</button>
-    <button data-page="bulk">Bulk Import / Discord Parser</button>
-  </nav>
+    <!-- Mini Dashboard Top Bar -->
+    <div class="top-stats">
+      <div class="mini-stat"><div class="lbl">Unique Items</div><div id="statTotalItems" class="val">—</div></div>
+      <div class="mini-stat"><div class="lbl">Active Listings</div><div id="statTotalObs" class="val">—</div></div>
+      <div class="mini-stat"><div class="lbl">Buy / Sell Ratio</div><div id="statRatio" class="val">—</div></div>
+      <div class="mini-stat"><div class="lbl">Most Traded</div><div id="statTopItem" class="val" style="font-size:15px;color:var(--accent)">—</div></div>
+    </div>
 
-  <!-- MARKET SECTION -->
-  <section id="market">
     <div class="panel">
-      <h2>Market Overview & Side-by-Side Pricing</h2>
-      <p class="muted">Click <b>any item row</b> in the table below to open its price history graph, price trends, and full listing breakdown.</p>
+      <!-- Category Pills -->
+      <div class="pills" id="catPills"></div>
 
-      <div class="grid" style="margin-bottom:16px">
-        <div>
-          <label>Search Item / Name</label>
-          <input id="search" placeholder="Search Tome of Archon, Fatebrand, Sigil...">
-        </div>
-        <div>
-          <label>Category Filter</label>
-          <select id="catFilter">
-            <option value="ALL">All Categories</option>
-            <option value="Tome">Tomes (Class Books)</option>
-            <option value="Sigil">Sigils</option>
-            <option value="Heartblood">Heartbloods</option>
-            <option value="Heirloom">Heirlooms</option>
-            <option value="Material">Materials & Items</option>
-            <option value="Key">Keys</option>
-            <option value="Equipment/Relic">Equipment & Relics</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div>
-          <label>Listing Direction</label>
-          <select id="filter">
-            <option value="all">All Market Listings (Buy & Sell)</option>
-            <option value="sell">Selling Listings Only</option>
-            <option value="buy">Buying Offers Only</option>
-          </select>
-        </div>
+      <!-- Controls -->
+      <div class="controls-grid">
+        <input id="searchInput" placeholder="🔍 Search item name (e.g. Tome of Archon, Fatebrand, Sigil)...">
+        <select id="dirFilter">
+          <option value="all">All Market Directions</option>
+          <option value="sell">Selling Listings Only</option>
+          <option value="buy">Buying Offers Only</option>
+        </select>
+        <button id="copySummaryBtn" class="btn btn-secondary">📋 Copy Market Overview</button>
       </div>
 
-      <div class="row" style="margin-bottom:16px;background:#252033;padding:12px;border-radius:8px;border:1px solid #4a3e5e">
-        <input type="file" id="localCsvFile" accept=".csv" style="display:none">
-        <button class="secondary" onclick="$('localCsvFile').click()">📁 Load Local CSV File</button>
-        <span id="csvStatus" class="muted" style="font-size:13px">Load <code>cleaned_pixel_lineage_trades_v2.csv</code> to populate live trades instantly.</span>
-      </div>
-
-      <div class="scroll">
+      <!-- Main Market Table -->
+      <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Item Name</th>
-              <th>Category</th>
-              <th>Highest Buy Offer</th>
-              <th>Lowest Sell Listing</th>
-              <th>Avg Market Estimate</th>
-              <th>Latest Activity</th>
-              <th>Total Listings</th>
-              <th>Trend Graph</th>
+              <th onclick="sortTable('name')">Item Name ↕</th>
+              <th onclick="sortTable('category')">Category ↕</th>
+              <th onclick="sortTable('buy')">Highest Buy Offer ↕</th>
+              <th onclick="sortTable('sell')">Lowest Sell Listing ↕</th>
+              <th onclick="sortTable('avg')">Avg Price ↕</th>
+              <th onclick="sortTable('activity')">Latest Post ↕</th>
+              <th onclick="sortTable('count')">Listings ↕</th>
+              <th style="text-align:right">Action</th>
             </tr>
           </thead>
-          <tbody id="marketRows">
-            <tr><td colspan="8" class="muted">Loading market observations...</td></tr>
+          <tbody id="marketTableRows">
+            <tr><td colspan="8" style="text-align:center;padding:30px;" class="muted">Loading market data... Load a CSV file above.</td></tr>
           </tbody>
         </table>
       </div>
     </div>
-
-    <!-- INTERACTIVE TREND GRAPH PANEL -->
-    <div id="trendPanel" class="panel hide" style="border:2px solid var(--accent)">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:12px">
-        <h3 style="margin:0">✦ Price History & Trend Details: <span id="trendItemTitle" style="color:var(--accent)"></span></h3>
-        <button class="sm secondary" onclick="$('trendPanel').classList.add('hide')">✕ Close Graph</button>
-      </div>
-
-      <div class="stat-cards">
-        <div class="stat-card"><div class="lbl">Highest Buy Offer</div><div id="cardBuy" class="val price-buy">-</div></div>
-        <div class="stat-card"><div class="lbl">Lowest Sell Listing</div><div id="cardSell" class="val price-sell">-</div></div>
-        <div class="stat-card"><div class="lbl">Median Market Price</div><div id="cardMed" class="val">-</div></div>
-        <div class="stat-card"><div class="lbl">Avg Price Estimate</div><div id="cardAvg" class="val">-</div></div>
-        <div class="stat-card"><div class="lbl">Total Observations</div><div id="cardCount" class="val">-</div></div>
-        <div class="stat-card"><div class="lbl">Price Trend</div><div id="cardTrend" class="val">-</div></div>
-      </div>
-      
-      <div class="chart-container">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <h4 style="margin:0;color:#c7a8fa">Historical Price Timeline (Green = Buy Offers, Purple = Sell Listings)</h4>
-          <span id="chartRangeInfo" class="muted" style="font-size:12px"></span>
-        </div>
-        <div id="chartBox"></div>
-      </div>
-
-      <div style="margin-top:20px">
-        <h4 style="margin:0 0 10px 0;color:#c7a8fa">Individual Trade History Posts</h4>
-        <div class="scroll">
-          <table>
-            <thead>
-              <tr><th>Timestamp</th><th>Direction</th><th>Price</th><th>Author / User</th><th>Original Message Snippet</th></tr>
-            </thead>
-            <tbody id="trendHistoryRows"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
   </section>
 
-  <!-- ALL TRADE LISTINGS SECTION -->
-  <section id="history" class="hide">
+  <!-- TRADE HISTORY FEED TAB -->
+  <section id="tab-history" class="hide">
     <div class="panel">
-      <h2>All Trade Listings Feed</h2>
-      <p class="muted">Individual trade listings timestamped directly from Discord trade channels.</p>
-      
-      <div class="grid" style="margin-bottom:16px">
-        <div>
-          <label>Filter Feed</label>
-          <input id="histSearch" placeholder="Filter by item or username..." oninput="renderHistory()">
-        </div>
-      </div>
-
-      <div class="scroll">
+      <h2 style="margin-bottom:12px">All Trade Listings Feed</h2>
+      <input id="feedSearch" placeholder="Filter by item, author, or snippet text..." style="margin-bottom:16px" oninput="renderHistory()">
+      <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Timestamp</th>
-              <th>Item</th>
-              <th>Category</th>
-              <th>Direction</th>
-              <th>Buy Price</th>
-              <th>Sell Price</th>
-              <th>Quantity</th>
-              <th>Posted By</th>
-              <th>Original Post Snippet</th>
-            </tr>
-          </thead>
-          <tbody id="historyRows"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- ITEM CATALOGUE SECTION -->
-  <section id="catalogue" class="hide">
-    <div class="panel">
-      <h2>Item Catalogue</h2>
-      <div class="scroll">
-        <table>
-          <thead><tr><th>Item Name</th><th>Category</th><th>Wiki Link</th><th>Verification Status</th></tr></thead>
-          <tbody id="itemRows"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- EDITOR SECTION -->
-  <section id="editor" class="hide">
-    <div class="panel">
-      <h2>Add Single Market Observation</h2>
-      <div class="grid">
-        <div><label>Item Name</label><input id="manualItem" placeholder="e.g. Tome of Archon"></div>
-        <div><label>Category</label><select id="manualCat"></select></div>
-        <div><label>Price (15m, 800k, 12500000 accepted)</label><input id="obsPrice" placeholder="15m"></div>
-        <div><label>Direction</label>
-          <select id="obsType">
-            <option value="sell">Selling Listing</option>
-            <option value="buy">Buying Offer</option>
-          </select>
-        </div>
-        <div><label>Author / Source</label><input id="source" placeholder="Discord Username"></div>
-      </div>
-      <label>Original Message Text</label>
-      <textarea id="raw" style="min-height:80px" placeholder="WTS Tome of Archon 15m"></textarea>
-      <button class="primary" id="addObs" style="margin-top:12px">Save Observation</button>
-    </div>
-  </section>
-
-  <!-- BULK IMPORT SECTION -->
-  <section id="bulk" class="hide">
-    <div class="panel">
-      <h2>Bulk Import & Discord Trade Message Parser</h2>
-      <p class="muted">Imports large Discord CSV exports or raw chat logs with zero-overlap deduplication against active observations.</p>
-      
-      <label>Upload Export File (.csv, .txt, .log)</label>
-      <input id="bulkFile" type="file" accept=".txt,.csv,.log,text/plain,text/csv">
-      
-      <label>Or Paste Raw Messages / CSV Text</label>
-      <textarea id="bulkText" placeholder="Paste Discord chat export or CSV text here..."></textarea>
-
-      <div class="row" style="margin-top:12px">
-        <button id="parse" class="primary">Parse & Deduplicate</button>
-        <button class="secondary" id="commit" disabled>Import Selected Staged Rows</button>
-      </div>
-
-      <p id="parseStatus" style="font-weight:bold;color:var(--accent);margin-top:12px"></p>
-
-      <div class="scroll" style="margin-top:16px">
-        <table>
-          <thead>
-            <tr>
-              <th><input type="checkbox" id="selectAll" checked></th>
               <th>Timestamp</th>
               <th>Item</th>
               <th>Category</th>
               <th>Direction</th>
               <th>Price</th>
               <th>Qty</th>
-              <th>Posted By</th>
-              <th>Status</th>
+              <th>Author</th>
+              <th>Original Snippet</th>
             </tr>
           </thead>
-          <tbody id="preview">
-            <tr><td colspan="9" class="muted">No rows staged. Upload or paste text above and click "Parse & Deduplicate".</td></tr>
+          <tbody id="historyTableRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ITEM CATALOGUE TAB -->
+  <section id="tab-catalogue" class="hide">
+    <div class="panel">
+      <h2 style="margin-bottom:12px">Item Catalogue</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Item Name</th><th>Category</th><th>Total Observations</th><th>Status</th></tr></thead>
+          <tbody id="catalogueTableRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- MANUAL OBSERVATION TAB -->
+  <section id="tab-editor" class="hide">
+    <div class="panel" style="max-width:600px;margin:auto;">
+      <h2 style="margin-bottom:16px">Add Single Market Observation</h2>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <label>Item Name <input id="manualItem" placeholder="e.g. Tome of Archon"></label>
+        <label>Category <select id="manualCat"></select></label>
+        <label>Price (15m, 800k, 12500000) <input id="manualPrice" placeholder="15m"></label>
+        <label>Listing Direction 
+          <select id="manualDir">
+            <option value="sell">Selling Listing</option>
+            <option value="buy">Buying Offer</option>
+          </select>
+        </label>
+        <label>Source Author <input id="manualAuthor" placeholder="Discord Username"></label>
+        <label>Raw Snippet <textarea id="manualRaw" placeholder="WTS Tome of Archon 15m"></textarea></label>
+        <button id="saveSingleBtn" class="btn">Save Listing</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- BULK IMPORT TAB -->
+  <section id="tab-bulk" class="hide">
+    <div class="panel">
+      <h2>Bulk CSV / Discord Export Parser</h2>
+      <p style="color:var(--text-muted);margin:8px 0 16px;">Paste raw text or upload a CSV file to inspect and parse into your active market session.</p>
+      <textarea id="bulkPasteText" placeholder="Paste CSV text here..."></textarea>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button id="bulkParseBtn" class="btn">Parse Text / File</button>
+        <button id="bulkCommitBtn" class="btn btn-secondary" disabled>Import Selected Rows</button>
+      </div>
+      <div class="table-wrap" style="margin-top:20px">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Item</th>
+              <th>Category</th>
+              <th>Direction</th>
+              <th>Price</th>
+              <th>Qty</th>
+              <th>Author</th>
+            </tr>
+          </thead>
+          <tbody id="bulkPreviewRows">
+            <tr><td colspan="7" style="text-align:center;padding:20px;" class="muted">No rows staged.</td></tr>
           </tbody>
         </table>
       </div>
-
-      <details style="margin-top:16px">
-        <summary>View Review & Duplicate Log</summary>
-        <pre id="rejected" style="white-space:pre-wrap;max-height:300px;overflow:auto;background:#15121e;padding:12px;border-radius:6px;font-size:12px"></pre>
-      </details>
     </div>
   </section>
 </main>
+
+<!-- ITEM DETAIL MODAL DIALOG -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2>
+        <span id="modalItemTitle">Tome of Archon</span>
+        <span id="modalItemCat" class="badge" style="background:#2b233e;color:var(--accent)">Tome</span>
+      </h2>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" id="modalCopyBtn">📋 Copy Item Stats</button>
+        <div class="close-btn" id="modalCloseBtn">✕</div>
+      </div>
+    </div>
+    
+    <div class="modal-body">
+      <!-- Mini Stat Grid -->
+      <div class="top-stats" style="margin-bottom:16px">
+        <div class="mini-stat"><div class="lbl">Highest Buy Offer</div><div id="mBuy" class="val" style="color:var(--buy)">—</div></div>
+        <div class="mini-stat"><div class="lbl">Lowest Sell Listing</div><div id="mSell" class="val" style="color:var(--sell)">—</div></div>
+        <div class="mini-stat"><div class="lbl">Median Market Price</div><div id="mMed" class="val">—</div></div>
+        <div class="mini-stat"><div class="lbl">Avg Price</div><div id="mAvg" class="val">—</div></div>
+        <div class="mini-stat"><div class="lbl">Total Observations</div><div id="mCount" class="val">—</div></div>
+      </div>
+
+      <!-- Trend Chart Box -->
+      <div style="background:#13101f;border:1px solid #2e2642;border-radius:12px;padding:16px;margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h4 style="font-size:13px;color:var(--accent)">Price History Timeline</h4>
+          <small id="chartRange" style="color:var(--text-muted)"></small>
+        </div>
+        <div id="modalChartBox" style="width:100%;height:180px"></div>
+      </div>
+
+      <!-- Item Trade Post Feed -->
+      <h4 style="font-size:13px;color:var(--accent);margin-bottom:10px">Logged Trade Messages</h4>
+      <div class="table-wrap" style="max-height:240px">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Direction</th>
+              <th>Price</th>
+              <th>Author</th>
+              <th>Message Snippet</th>
+            </tr>
+          </thead>
+          <tbody id="modalTradeRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money = n => (n === null || n === undefined || isNaN(n) || n === '') ? '—' : Number(n).toLocaleString('en-US', {maximumFractionDigits: 0}) + ' Gold';
-const cats = ['Tome','Sigil','Heartblood','Heirloom','Material','Key','Equipment/Relic','Scroll','Other'];
+const money = n => (n === null || n === undefined || isNaN(n) || n === '' || n === 0) ? '—' : Number(n).toLocaleString('en-US', {maximumFractionDigits: 0}) + ' Gold';
+const cats = ['ALL', 'Tome', 'Sigil', 'Heartblood', 'Heirloom', 'Material', 'Key', 'Scroll', 'Equipment/Relic', 'Other'];
 
-let items = [], observations = [], staged = [], selectedItemKey = null;
+let observations = [], staged = [], activeCategory = 'ALL', activeSortCol = 'count', sortAsc = false, selectedModalItem = null;
 
-function page(p) {
-  document.querySelectorAll('main>section').forEach(x => x.classList.toggle('hide', x.id !== p));
-  document.querySelectorAll('[data-page]').forEach(b => b.classList.toggle('primary', b.dataset.page === p));
-  if (p === 'history') renderHistory();
-  if (p === 'catalogue') renderCatalogue();
+// Tab Switcher
+document.querySelectorAll('nav button').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('main > section').forEach(s => s.classList.add('hide'));
+    btn.classList.add('active');
+    let tab = btn.dataset.tab;
+    $('tab-' + tab).classList.remove('hide');
+    if (tab === 'history') renderHistory();
+    if (tab === 'catalogue') renderCatalogue();
+  };
+});
+
+// Category Pills setup
+function initPills() {
+  $('catPills').innerHTML = cats.map(c => `
+    <button class="pill-btn ${c === activeCategory ? 'active' : ''}" onclick="selectCat('${c}')">${c === 'ALL' ? '✦ All Items' : c}</button>
+  `).join('');
 }
-document.querySelectorAll('[data-page]').forEach(b => b.onclick = () => page(b.dataset.page));
+function selectCat(c) {
+  activeCategory = c;
+  initPills();
+  render();
+}
 
 function fmtTime(t) {
   if (!t) return '—';
   let d = new Date(t);
   if (isNaN(d.getTime())) return String(t).slice(0, 19).replace('T', ' ');
   return d.toISOString().replace('T', ' ').slice(0, 19);
-}
-
-function med(a) {
-  let x = [...a].sort((a, b) => a - b), n = x.length;
-  return n ? (n % 2 ? x[(n - 1) / 2] : (x[n / 2 - 1] + x[n / 2]) / 2) : null;
-}
-
-function estimate(a) {
-  if (!a.length) return { avg: null, median: null, count: 0, total: 0 };
-  let m = med(a);
-  return { avg: a.reduce((s, v) => s + v, 0) / a.length, median: m, count: a.length, total: a.length };
 }
 
 function parseCSVLine(line) {
@@ -353,7 +375,6 @@ function processCSVText(text) {
 
   let headerCols = parseCSVLine(lines[0]).map(h => h.toLowerCase());
   
-  // Dynamic column mapping based on header names
   let idxItem = headerCols.findIndex(h => h === 'item' || h === 'item_name');
   let idxCat = headerCols.findIndex(h => h === 'category');
   let idxType = headerCols.findIndex(h => h === 'listing_type' || h === 'type' || h === 'direction');
@@ -399,37 +420,124 @@ function processCSVText(text) {
   return rows;
 }
 
-// Local CSV File Upload Handler
-$('localCsvFile').onchange = e => {
-  let file = e.target.files?.[0];
-  if (!file) return;
+// File Drop & Load
+let dropZone = $('dropZone');
+dropZone.onclick = () => $('localCsvFile').click();
+dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('dragover'); };
+dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+dropZone.ondrop = e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  let file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+};
+$('localCsvFile').onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]); };
 
-  $('csvStatus').textContent = `Loading ${file.name}...`;
+function loadFile(file) {
   let reader = new FileReader();
   reader.onload = ev => {
     observations = processCSVText(ev.target.result);
-    $('csvStatus').textContent = `Loaded ${observations.length.toLocaleString()} trade records from ${file.name}`;
     render();
     renderHistory();
     renderCatalogue();
+    dropZone.innerHTML = `<span style="color:var(--buy);font-weight:700">✅ Loaded ${observations.length.toLocaleString()} records from ${file.name}</span>`;
   };
   reader.readAsText(file);
-};
+}
 
-function renderTrend(itemKey) {
-  selectedItemKey = itemKey;
-  document.querySelectorAll('.clickable-row').forEach(row => {
-    row.classList.toggle('active-row', row.dataset.item === itemKey);
+function sortTable(col) {
+  if (activeSortCol === col) sortAsc = !sortAsc;
+  else { activeSortCol = col; sortAsc = false; }
+  render();
+}
+
+function render() {
+  let search = $('searchInput').value.toLowerCase();
+  let dir = $('dirFilter').value;
+
+  let itemMap = new Map();
+  let totalBuy = 0, totalSell = 0;
+
+  for (let o of observations) {
+    let key = o.item.toLowerCase();
+    if (!itemMap.has(key)) {
+      itemMap.set(key, { name: o.item, category: o.category, buyPrices: [], sellPrices: [], allPrices: [], lastTime: o.timestamp, count: 0 });
+    }
+    let g = itemMap.get(key);
+    g.count++;
+    if (o.price) g.allPrices.push(o.price);
+    if (o.listing_type === 'buy') { totalBuy++; if (o.price) g.buyPrices.push(o.price); }
+    if (o.listing_type === 'sell') { totalSell++; if (o.price) g.sellPrices.push(o.price); }
+    if (new Date(o.timestamp) > new Date(g.lastTime)) g.lastTime = o.timestamp;
+  }
+
+  // Top Dashboard Stats
+  $('statTotalItems').textContent = itemMap.size.toLocaleString();
+  $('statTotalObs').textContent = observations.length.toLocaleString();$('statRatio').textContent = totalSell ? `${(totalBuy/totalSell).toFixed(2)} Buy/Sell` : '—';
+  
+  let topItem = [...itemMap.values()].sort((a,b) => b.count - a.count)[0];
+  $('statTopItem').textContent = topItem ? `${topItem.name} (${topItem.count})` : '—';
+
+  let list = [...itemMap.values()].filter(g => {
+    if (activeCategory !== 'ALL' && g.category !== activeCategory) return false;
+    if (dir === 'buy' && !g.buyPrices.length) return false;
+    if (dir === 'sell' && !g.sellPrices.length) return false;
+    if (search && !g.name.toLowerCase().includes(search)) return false;
+    return true;
   });
 
-  let groupObs = observations.filter(o => o.item.toLowerCase() === itemKey.toLowerCase())
-    .sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+  // Sorting
+  list.sort((a, b) => {
+    let maxBuyA = a.buyPrices.length ? Math.max(...a.buyPrices) : 0;
+    let maxBuyB = b.buyPrices.length ? Math.max(...b.buyPrices) : 0;
+    let minSellA = a.sellPrices.length ? Math.min(...a.sellPrices) : 9e9;
+    let minSellB = b.sellPrices.length ? Math.min(...b.sellPrices) : 9e9;
+    let avgA = a.allPrices.length ? a.allPrices.reduce((s,v)=>s+v,0)/a.allPrices.length : 0;
+    let avgB = b.allPrices.length ? b.allPrices.reduce((s,v)=>s+v,0)/b.allPrices.length : 0;
 
-  if (!groupObs.length) { $('trendPanel').classList.add('hide'); return; }
+    let res = 0;
+    if (activeSortCol === 'name') res = a.name.localeCompare(b.name);
+    else if (activeSortCol === 'category') res = a.category.localeCompare(b.category);
+    else if (activeSortCol === 'buy') res = maxBuyA - maxBuyB;
+    else if (activeSortCol === 'sell') res = minSellA - minSellB;
+    else if (activeSortCol === 'avg') res = avgA - avgB;
+    else if (activeSortCol === 'activity') res = new Date(a.lastTime) - new Date(b.lastTime);
+    else res = a.count - b.count;
 
-  $('trendPanel').classList.remove('hide');
+    return sortAsc ? res : -res;
+  });
+
+  $('marketTableRows').innerHTML = list.map(g => {
+    let maxBuy = g.buyPrices.length ? Math.max(...g.buyPrices) : null;
+    let minSell = g.sellPrices.length ? Math.min(...g.sellPrices) : null;
+    let avgP = g.allPrices.length ? g.allPrices.reduce((s,v)=>s+v,0)/g.allPrices.length : null;
+
+    return `
+      <tr class="item-row" onclick="openDetailModal('${esc(g.name)}')">
+        <td><strong style="color:var(--text-main);font-size:14px">${esc(g.name)}</strong></td>
+        <td><span class="badge" style="background:#261f38;color:var(--text-muted)">${esc(g.category)}</span></td>
+        <td style="color:var(--buy);font-weight:700">${money(maxBuy)}</td>
+        <td style="color:var(--sell);font-weight:700">${money(minSell)}</td>
+        <td style="font-weight:600">${money(avgP)}</td>
+        <td><small style="color:var(--text-muted)">${esc(fmtTime(g.lastTime))}</small></td>
+        <td><b style="color:var(--accent)">${g.count}</b></td>
+        <td style="text-align:right"><button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation(); openDetailModal('${esc(g.name)}')">Details 📊</button></td>
+      </tr>
+    `;
+  }).join('') || '<tr><td colspan="8" style="text-align:center;padding:30px;" class="muted">No matching items found.</td></tr>';
+}
+
+// Modal Detail Window Logic
+function openDetailModal(itemName) {
+  selectedModalItem = itemName;
+  let groupObs = observations.filter(o => o.item.toLowerCase() === itemName.toLowerCase())
+    .sort((a,b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+
+  if (!groupObs.length) return;
   let sample = groupObs[0];
-  $('trendItemTitle').textContent = `${sample.item} (${sample.category})`;
+
+  $('modalItemTitle').textContent = sample.item;
+  $('modalItemCat').textContent = sample.category;
 
   let buyPrices = groupObs.filter(o => o.listing_type === 'buy' && o.price).map(o => o.price);
   let sellPrices = groupObs.filter(o => o.listing_type === 'sell' && o.price).map(o => o.price);
@@ -437,168 +545,106 @@ function renderTrend(itemKey) {
 
   let maxBuy = buyPrices.length ? Math.max(...buyPrices) : null;
   let minSell = sellPrices.length ? Math.min(...sellPrices) : null;
-  let e = estimate(allPrices);
+  
+  let sorted = [...allPrices].sort((a,b) => a-b);
+  let median = sorted.length ? (sorted.length % 2 ? sorted[(sorted.length-1)/2] : (sorted[sorted.length/2 - 1] + sorted[sorted.length/2])/2) : null;
+  let avg = allPrices.length ? allPrices.reduce((s,v)=>s+v,0)/allPrices.length : null;
 
-  $('cardBuy').textContent = money(maxBuy);
-  $('cardSell').textContent = money(minSell);$('cardMed').textContent = money(e.median);
-  $('cardAvg').textContent = money(e.avg);$('cardCount').textContent = `${groupObs.length} listings`;
+  $('mBuy').textContent = money(maxBuy);
+  $('mSell').textContent = money(minSell);$('mMed').textContent = money(median);
+  $('mAvg').textContent = money(avg);$('mCount').textContent = groupObs.length;
 
-  $('trendHistoryRows').innerHTML = groupObs.slice().reverse().map(o => `
+  // Render modal chart
+  renderModalChart(groupObs, allPrices);
+
+  // Render Modal History
+  $('modalTradeRows').innerHTML = groupObs.slice().reverse().map(o => `
     <tr>
-      <td><small>${esc(fmtTime(o.timestamp))}</small></td>
-      <td><span class="tag ${o.listing_type === 'buy' ? 'tag-buy' : 'tag-sell'}">${esc(o.listing_type)}</span></td>
-      <td class="${o.listing_type === 'buy' ? 'price-buy' : 'price-sell'}">${money(o.price)}</td>
-      <td><small class="muted">@${esc(o.author_name)}</small></td>
-      <td><small>${esc(o.original_text || '—')}</small></td>
+      <td><small style="color:var(--text-muted)">${esc(fmtTime(o.timestamp))}</small></td>
+      <td><span class="badge ${o.listing_type === 'buy' ? 'badge-buy' : 'badge-sell'}">${o.listing_type}</span></td>
+      <td style="font-weight:700;color:${o.listing_type === 'buy' ? 'var(--buy)' : 'var(--sell)'}">${money(o.price)}</td>
+      <td><small>@${esc(o.author_name)}</small></td>
+      <td><small style="color:var(--text-muted)">${esc(o.original_text || '—')}</small></td>
     </tr>
   `).join('');
 
-  let W = 800, H = 180, p = 25;
-  if (allPrices.length < 2) {
-    $('chartBox').innerHTML = '<p class="muted" style="padding:20px;text-align:center">Single observation recorded. Multiple timestamped listings will project a price trajectory graph.</p>';
-  } else {
-    let minP = Math.min(...allPrices), maxP = Math.max(...allPrices), rangeP = (maxP - minP) || 1;
-    let minT = new Date(groupObs[0].timestamp || 0).getTime();
-    let maxT = new Date(groupObs[groupObs.length - 1].timestamp || 0).getTime();
-    if (maxT === minT) maxT = minT + 1;
-
-    let points = groupObs.map(o => {
-      let price = o.price || 0;
-      let t = new Date(o.timestamp || 0).getTime();
-      let x = p + ((t - minT) / (maxT - minT)) * (W - 2 * p);
-      let y = H - p - ((price - minP) / rangeP) * (H - 2 * p);
-      return { x, y, price, t: fmtTime(o.timestamp), type: o.listing_type, author: o.author_name };
-    });
-
-    let poly = points.map(pt => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
-    let dots = points.map(pt => `
-      <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5" fill="${pt.type === 'buy' ? '#4ade80' : '#c5a3ff'}" stroke="#111019" stroke-width="1.5">
-        <title>${pt.t} | @${esc(pt.author)}: ${money(pt.price)} (${pt.type.toUpperCase()})</title>
-      </circle>
-    `).join('');
-
-    $('chartBox').innerHTML = `
-      <svg viewBox="0 0 ${W} ${H}" class="svg-chart">
-        <polyline fill="none" stroke="#7950c5" stroke-width="3" points="${poly}" />
-        ${dots}
-      </svg>
-    `;
-  }
+  $('detailModal').classList.add('open');
 }
 
-function render() {
-  let search = $('search').value.toLowerCase();
-  let cat = $('catFilter').value;
-  let dir = $('filter').value;
-
-  let itemMap = new Map();
-  for (let o of observations) {
-    let key = o.item.toLowerCase();
-    if (!itemMap.has(key)) {
-      itemMap.set(key, { name: o.item, category: o.category, buyPrices: [], sellPrices: [], allPrices: [], lastTime: o.timestamp, obsCount: 0 });
-    }
-    let g = itemMap.get(key);
-    g.obsCount++;
-    if (o.price) g.allPrices.push(o.price);
-    if (o.listing_type === 'buy' && o.price) g.buyPrices.push(o.price);
-    if (o.listing_type === 'sell' && o.price) g.sellPrices.push(o.price);
-    if (new Date(o.timestamp) > new Date(g.lastTime)) g.lastTime = o.timestamp;
+function renderModalChart(groupObs, allPrices) {
+  let box = $('modalChartBox');
+  if (allPrices.length < 2) {
+    box.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted)">Single listing recorded. Need multiple listings for trajectory chart.</div>';
+    return;
   }
+  let W = 800, H = 160, p = 20;
+  let minP = Math.min(...allPrices), maxP = Math.max(...allPrices), rangeP = (maxP - minP) || 1;
+  let minT = new Date(groupObs[0].timestamp || 0).getTime();
+  let maxT = new Date(groupObs[groupObs.length - 1].timestamp || 0).getTime();
+  if (maxT === minT) maxT = minT + 1;
 
-  let rows = [...itemMap.values()].filter(g => {
-    if (cat !== 'ALL' && g.category !== cat) return false;
-    if (dir === 'buy' && !g.buyPrices.length) return false;
-    if (dir === 'sell' && !g.sellPrices.length) return false;
-    if (search && !g.name.toLowerCase().includes(search)) return false;
-    return true;
+  let points = groupObs.map(o => {
+    let price = o.price || 0;
+    let t = new Date(o.timestamp || 0).getTime();
+    let x = p + ((t - minT) / (maxT - minT)) * (W - 2 * p);
+    let y = H - p - ((price - minP) / rangeP) * (H - 2 * p);
+    return { x, y, price, t: fmtTime(o.timestamp), type: o.listing_type, author: o.author_name };
   });
 
-  $('marketRows').innerHTML = rows.map(g => {
-    let maxBuy = g.buyPrices.length ? Math.max(...g.buyPrices) : null;
-    let minSell = g.sellPrices.length ? Math.min(...g.sellPrices) : null;
-    let e = estimate(g.allPrices);
-    return `
-      <tr class="clickable-row ${selectedItemKey === g.name ? 'active-row' : ''}" onclick="renderTrend('${esc(g.name)}')">
-        <td><strong style="color:var(--accent)">${esc(g.name)}</strong></td>
-        <td><small class="muted">${esc(g.category)}</small></td>
-        <td class="price-buy">${money(maxBuy)}</td>
-        <td class="price-sell">${money(minSell)}</td>
-        <td>${money(e.avg)}</td>
-        <td><small class="muted">${esc(fmtTime(g.lastTime))}</small></td>
-        <td><b>${g.obsCount}</b></td>
-        <td><button class="sm primary" onclick="event.stopPropagation(); renderTrend('${esc(g.name)}')">View Graph 📈</button></td>
-      </tr>
-    `;
-  }).join('') || '<tr><td colspan="8" class="muted">No items found. Click "Load Local CSV File" above.</td></tr>';
+  let poly = points.map(pt => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
+  let dots = points.map(pt => `
+    <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="${pt.type === 'buy' ? '#4ade80' : '#a77bf3'}">
+      <title>${pt.t} | @${esc(pt.author)}: ${money(pt.price)} (${pt.type.toUpperCase()})</title>
+    </circle>
+  `).join('');
+
+  box.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:100%">
+      <polyline fill="none" stroke="#a77bf3" stroke-width="2.5" points="${poly}" />
+      ${dots}
+    </svg>
+  `;
+  $('chartRange').textContent = `${fmtTime(groupObs[0].timestamp)} → ${fmtTime(groupObs[groupObs.length - 1].timestamp)}`;
 }
 
+// Close Modal handlers
+$('modalCloseBtn').onclick = () => $('detailModal').classList.remove('open');$('detailModal').onclick = e => { if (e.target === $('detailModal'))$('detailModal').classList.remove('open'); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('detailModal').classList.remove('open'); });
+
 function renderHistory() {
-  let search = ($('histSearch')?.value || '').toLowerCase();
-  let filtered = observations.filter(o => !search || o.item.toLowerCase().includes(search) || o.author_name.toLowerCase().includes(search));
-  $('historyRows').innerHTML = filtered.slice(0, 300).map(o => `
+  let search = ($('feedSearch')?.value || '').toLowerCase();
+  let filtered = observations.filter(o => !search || o.item.toLowerCase().includes(search) || o.author_name.toLowerCase().includes(search) || o.original_text.toLowerCase().includes(search));
+  $('historyTableRows').innerHTML = filtered.slice(0, 300).map(o => `
     <tr>
-      <td><small class="muted">${esc(fmtTime(o.timestamp))}</small></td>
+      <td><small style="color:var(--text-muted)">${esc(fmtTime(o.timestamp))}</small></td>
       <td><strong>${esc(o.item)}</strong></td>
-      <td><small>${esc(o.category)}</small></td>
-      <td><span class="tag ${o.listing_type === 'buy' ? 'tag-buy' : 'tag-sell'}">${esc(o.listing_type)}</span></td>
-      <td class="price-buy">${money(o.buy_price)}</td>
-      <td class="price-sell">${money(o.sell_price)}</td>
+      <td><small style="color:var(--text-muted)">${esc(o.category)}</small></td>
+      <td><span class="badge ${o.listing_type === 'buy' ? 'badge-buy' : 'badge-sell'}">${o.listing_type}</span></td>
+      <td style="font-weight:700;color:${o.listing_type === 'buy' ? 'var(--buy)' : 'var(--sell)'}">${money(o.price)}</td>
       <td>${o.quantity || 1}</td>
-      <td><small class="muted">@${esc(o.author_name)}</small></td>
-      <td><small class="muted">${esc(o.original_text || '—')}</small></td>
+      <td><small>@${esc(o.author_name)}</small></td>
+      <td><small style="color:var(--text-muted)">${esc(o.original_text || '—')}</small></td>
     </tr>
   `).join('');
 }
 
 function renderCatalogue() {
-  let itemSet = new Map();
-  observations.forEach(o => { if (!itemSet.has(o.item)) itemSet.set(o.item, o.category); });
-  $('itemRows').innerHTML = [...itemSet.entries()].map(([name, cat]) => `
-    <tr><td><strong>${esc(name)}</strong></td><td>${esc(cat)}</td><td>—</td><td>Verified</td></tr>
+  let itemMap = new Map();
+  for (let o of observations) {
+    let key = o.item.toLowerCase();
+    if (!itemMap.has(key)) itemMap.set(key, { name: o.item, category: o.category, count: 0 });
+    itemMap.get(key).count++;
+  }
+  $('catalogueTableRows').innerHTML = [...itemMap.values()].map(i => `
+    <tr><td><strong>${esc(i.name)}</strong></td><td>${esc(i.category)}</td><td><b>${i.count}</b></td><td><span class="badge badge-buy">Verified</span></td></tr>
   `).join('');
 }
 
-// Bulk Parse Button
-$('parse').onclick = async () => {
-  let fileInput = $('bulkFile');
-  let rawContent = fileInput.files?.[0] ? await fileInput.files[0].text() : $('bulkText').value;
+$('searchInput').oninput = render;
+$('dirFilter').onchange = render;
+$('manualCat').innerHTML = cats.filter(c => c !== 'ALL').map(c => `<option>${c}</option>`).join('');
 
-  if (!rawContent.trim()) return alert('Please upload or paste CSV text first.');
-
-  staged = processCSVText(rawContent);
-  $('preview').innerHTML = staged.slice(0, 500).map((row, i) => `
-    <tr>
-      <td><input type="checkbox" checked></td>
-      <td><small>${esc(fmtTime(row.timestamp))}</small></td>
-      <td><strong>${esc(row.item)}</strong></td>
-      <td><small class="muted">${esc(row.category)}</small></td>
-      <td><span class="tag ${row.listing_type === 'buy' ? 'tag-buy' : 'tag-sell'}">${esc(row.listing_type)}</span></td>
-      <td class="${row.listing_type === 'buy' ? 'price-buy' : 'price-sell'}">${money(row.price)}</td>
-      <td>${row.quantity}</td>
-      <td><small class="muted">@${esc(row.author_name)}</small></td>
-      <td><span class="tag tag-buy">READY</span></td>
-    </tr>
-  `).join('');
-
-  $('parseStatus').textContent = `Parsed ${staged.length.toLocaleString()} valid trade listings!`;
-  $('commit').disabled = false;
-};
-
-$('commit').onclick = () => {
-  observations = [...observations, ...staged];
-  render();
-  renderHistory();
-  renderCatalogue();
-  alert(`Successfully imported ${staged.length.toLocaleString()} rows into live tracker!`);
-  page('market');
-};
-
-$('search').oninput = render;
-$('catFilter').onchange = render;
-$('filter').onchange = render;
-$('manualCat').innerHTML = cats.map(c => `<option>${c}</option>`).join('');
-
-$('notice').textContent = "Ready! Load your cleaned CSV file using the button below.";
+initPills();
 </script>
 </body>
 </html>
