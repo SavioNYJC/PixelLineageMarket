@@ -29,12 +29,20 @@ header { max-width: 1380px; margin: 0 auto; padding: 20px 24px; display: flex; j
 .logo-title h1 span { color: var(--accent); }
 .logo-title small { color: var(--text-muted); font-size: 12px; }
 
+.header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pill { border: 1px solid #483a61; background: #1c172d; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--accent); }
+
 nav { max-width: 1380px; margin: 16px auto 0; padding: 0 24px; display: flex; gap: 8px; border-bottom: 1px solid var(--panel-border); overflow-x: auto; }
 nav button { background: none; border: none; color: var(--text-muted); padding: 12px 18px; font-weight: 600; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s ease; white-space: nowrap; }
 nav button:hover { color: var(--text-main); }
 nav button.active { color: var(--accent); border-bottom-color: var(--accent); background: linear-gradient(180deg, transparent, rgba(167, 123, 243, 0.08)); }
 
 main { max-width: 1380px; margin: 0 auto; padding: 24px; }
+
+/* Status Notice Banner */
+.notice-banner { background: #1b162a; border: 1px solid var(--panel-border); border-radius: 10px; padding: 12px 18px; margin-bottom: 20px; font-size: 13px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.notice-banner.good { border-color: rgba(74, 222, 128, 0.4); color: var(--buy); background: rgba(74, 222, 128, 0.05); }
+.notice-banner.bad { border-color: rgba(248, 113, 113, 0.4); color: var(--sell); background: rgba(248, 113, 113, 0.05); }
 
 /* Panels */
 .panel { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
@@ -76,7 +84,7 @@ tr.item-row:hover { background: #231c36 !important; }
 .badge-buy { background: rgba(74, 222, 128, 0.15); color: var(--buy); border: 1px solid rgba(74, 222, 128, 0.3); }
 .badge-sell { background: rgba(248, 113, 113, 0.15); color: var(--sell); border: 1px solid rgba(248, 113, 113, 0.3); }
 
-/* Item Detail Modal Overlay */
+/* Item Detail Modal & Auth Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(8, 6, 14, 0.82); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; padding: 20px; }
 .modal-overlay.open { opacity: 1; pointer-events: auto; }
 
@@ -101,10 +109,13 @@ tr.item-row:hover { background: #231c36 !important; }
 <header>
   <div class="logo-title">
     <h1>✦ <span>Pixel Lineage</span> Market</h1>
-    <small>Unified Live Market Tracker & Price Analytics</small>
+    <small>Unified Live Market Tracker & Supabase Price Analytics</small>
   </div>
-  <div style="display:flex;gap:10px;align-items:center;">
-    <button class="btn btn-secondary" onclick="$('localCsvFile').click()">📁 Load CSV Data</button>
+  <div class="header-actions">
+    <span id="identityPill" class="pill">⚡ Supabase: Connecting...</span>
+    <button class="btn btn-secondary" id="loginBtn">Admin Login</button>
+    <button class="btn btn-secondary hide" id="logoutBtn">Sign Out</button>
+    <button class="btn btn-secondary" onclick="$('localCsvFile').click()">📁 Load Local CSV</button>
     <input type="file" id="localCsvFile" accept=".csv" style="display:none">
   </div>
 </header>
@@ -114,16 +125,22 @@ tr.item-row:hover { background: #231c36 !important; }
   <button data-tab="history">Trade Feed</button>
   <button data-tab="catalogue">Item Catalogue</button>
   <button data-tab="editor">Manual Listing</button>
-  <button data-tab="bulk">Bulk Import</button>
+  <button data-tab="bulk">Bulk Import to Supabase</button>
 </nav>
 
 <main>
+  <!-- Connection Status Banner -->
+  <div class="notice-banner" id="noticeBanner">
+    <span id="noticeText">Checking Supabase server connection…</span>
+    <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="loadFromSupabase()">🔄 Retry Sync</button>
+  </div>
+
   <!-- MARKET TAB -->
   <section id="tab-market">
     <!-- Quick Drag & Drop Bar -->
     <div class="drop-zone" id="dropZone">
       <span style="font-weight:600;color:var(--accent)">📥 Drag & Drop your cleaned_pixel_lineage_trades_v2.csv file here</span>
-      <span style="display:block;font-size:12px;color:var(--text-muted);margin-top:4px">or click "Load CSV Data" above to instantly populate 3,000+ trades</span>
+      <span style="display:block;font-size:12px;color:var(--text-muted);margin-top:4px">or click "Load Local CSV" above to populate trades locally</span>
     </div>
 
     <!-- Mini Dashboard Top Bar -->
@@ -165,7 +182,7 @@ tr.item-row:hover { background: #231c36 !important; }
             </tr>
           </thead>
           <tbody id="marketTableRows">
-            <tr><td colspan="8" style="text-align:center;padding:30px;" class="muted">Loading market data... Load a CSV file above.</td></tr>
+            <tr><td colspan="8" style="text-align:center;padding:30px;" class="muted">Loading market data... Load a CSV file or check Supabase connection.</td></tr>
           </tbody>
         </table>
       </div>
@@ -226,7 +243,7 @@ tr.item-row:hover { background: #231c36 !important; }
         </label>
         <label>Source Author <input id="manualAuthor" placeholder="Discord Username"></label>
         <label>Raw Snippet <textarea id="manualRaw" placeholder="WTS Tome of Archon 15m"></textarea></label>
-        <button id="saveSingleBtn" class="btn">Save Listing</button>
+        <button id="saveSingleBtn" class="btn">Save & Sync Listing</button>
       </div>
     </div>
   </section>
@@ -234,17 +251,26 @@ tr.item-row:hover { background: #231c36 !important; }
   <!-- BULK IMPORT TAB -->
   <section id="tab-bulk" class="hide">
     <div class="panel">
-      <h2>Bulk CSV / Discord Export Parser</h2>
-      <p style="color:var(--text-muted);margin:8px 0 16px;">Paste raw text or upload a CSV file to inspect and parse into your active market session.</p>
-      <textarea id="bulkPasteText" placeholder="Paste CSV text here..."></textarea>
-      <div style="display:flex;gap:10px;margin-top:12px">
-        <button id="bulkParseBtn" class="btn">Parse Text / File</button>
-        <button id="bulkCommitBtn" class="btn btn-secondary" disabled>Import Selected Rows</button>
+      <h2>Bulk Import to Supabase Database</h2>
+      <p style="color:var(--text-muted);margin:8px 0 16px;">Paste CSV text or upload a CSV file below to parse, deduplicate, and store into your active Supabase database.</p>
+      
+      <div style="margin-bottom:12px">
+        <input id="bulkFileInput" type="file" accept=".csv,.txt" style="margin-bottom:8px">
+        <textarea id="bulkPasteText" placeholder="Or paste CSV text here..."></textarea>
       </div>
+
+      <div style="display:flex;gap:10px;margin-top:12px;align-items:center">
+        <button id="bulkParseBtn" class="btn">Parse & Stage CSV Rows</button>
+        <button id="bulkCommitBtn" class="btn btn-secondary" disabled>☁️ Store Selected Rows into Supabase</button>
+      </div>
+
+      <p id="bulkStatus" style="margin-top:12px;font-weight:700;color:var(--accent)"></p>
+
       <div class="table-wrap" style="margin-top:20px">
         <table>
           <thead>
             <tr>
+              <th><input type="checkbox" id="selectAllChks" checked></th>
               <th>Timestamp</th>
               <th>Item</th>
               <th>Category</th>
@@ -255,13 +281,31 @@ tr.item-row:hover { background: #231c36 !important; }
             </tr>
           </thead>
           <tbody id="bulkPreviewRows">
-            <tr><td colspan="7" style="text-align:center;padding:20px;" class="muted">No rows staged.</td></tr>
+            <tr><td colspan="8" style="text-align:center;padding:20px;" class="muted">No rows staged. Upload or paste text above and click "Parse & Stage CSV Rows".</td></tr>
           </tbody>
         </table>
       </div>
     </div>
   </section>
 </main>
+
+<!-- ADMIN LOGIN MODAL DIALOG -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal-card" style="max-width:420px">
+    <div class="modal-header">
+      <h2>✦ Supabase Admin Login</h2>
+      <div class="close-btn" id="authCloseBtn">✕</div>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <label>Email Address <input id="authEmail" type="email" placeholder="admin@pixellineage.com"></label>
+        <label>Password <input id="authPassword" type="password" placeholder="••••••••"></label>
+        <button id="signInBtn" class="btn" style="width:100%;margin-top:8px">Sign In to Supabase</button>
+        <p id="authMsg" style="font-size:12px;color:var(--sell)"></p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ITEM DETAIL MODAL DIALOG -->
 <div class="modal-overlay" id="detailModal">
@@ -316,14 +360,35 @@ tr.item-row:hover { background: #231c36 !important; }
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 'use strict';
+const URL_BASE = 'https://debencvoeryzbiopeufr.supabase.co';
+const KEY = 'sb_publishable_EnJD8dkQqTQGYZ7B2oHA5A_lIUnb3at';
+const ADMIN_ID = '1f6ac2d0-ad1c-4ada-947a-630229bc8ccb';
+
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = n => (n === null || n === undefined || isNaN(n) || n === '' || n === 0) ? '—' : Number(n).toLocaleString('en-US', {maximumFractionDigits: 0}) + ' Gold';
 const cats = ['ALL', 'Tome', 'Sigil', 'Heartblood', 'Heirloom', 'Material', 'Key', 'Scroll', 'Equipment/Relic', 'Other'];
 
-let observations = [], staged = [], activeCategory = 'ALL', activeSortCol = 'count', sortAsc = false, selectedModalItem = null;
+let client = null, isAdmin = false;
+let observations = [], items = [], staged = [], activeCategory = 'ALL', activeSortCol = 'count', sortAsc = false, selectedModalItem = null;
+
+// Initialize Supabase Client
+if (window.supabase && typeof window.supabase.createClient === 'function') {
+  try {
+    client = window.supabase.createClient(URL_BASE, KEY);
+  } catch (err) {
+    console.error('Supabase init failed:', err);
+  }
+}
+
+function notify(text, state = 'info') {
+  let el = $('noticeBanner');
+  $('noticeText').textContent = text;
+  el.className = 'notice-banner ' + (state === 'good' ? 'good' : state === 'bad' ? 'bad' : '');
+}
 
 // Tab Switcher
 document.querySelectorAll('nav button').forEach(btn => {
@@ -338,7 +403,6 @@ document.querySelectorAll('nav button').forEach(btn => {
   };
 });
 
-// Category Pills setup
 function initPills() {
   $('catPills').innerHTML = cats.map(c => `
     <button class="pill-btn ${c === activeCategory ? 'active' : ''}" onclick="selectCat('${c}')">${c === 'ALL' ? '✦ All Items' : c}</button>
@@ -405,6 +469,7 @@ function processCSVText(text) {
     if (!item || item.toLowerCase() === 'item') continue;
 
     rows.push({
+      selected: true,
       timestamp: ts,
       author_name: author,
       item: item,
@@ -420,7 +485,58 @@ function processCSVText(text) {
   return rows;
 }
 
-// File Drop & Load
+// Supabase Pagination Fetcher
+async function fetchAllSupabaseRows(table) {
+  if (!client) return [];
+  let rows = [];
+  for (let from = 0; ; from += 1000) {
+    let { data, error } = await client.from(table).select('*').range(from, from + 999);
+    if (error) throw error;
+    if (data) rows.push(...data);
+    if (!data || data.length < 1000) break;
+  }
+  return rows;
+}
+
+async function loadFromSupabase() {
+  if (!client) {
+    notify("Supabase client not initialized. Running in local mode.", "bad");
+    return;
+  }
+  try {
+    notify("Fetching live trade observations from Supabase database...", "info");
+    items = await fetchAllSupabaseRows('items');
+    let dbObs = await fetchAllSupabaseRows('price_observations');
+
+    if (dbObs && dbObs.length) {
+      let itemMap = new Map(items.map(i => [i.id, i]));
+      observations = dbObs.map(o => {
+        let it = itemMap.get(o.item_id);
+        return {
+          id: o.id,
+          item: it?.name || 'Unspecified Item',
+          category: it?.category || 'Other',
+          listing_type: o.listing_type || 'sell',
+          price: Number(o.price) || null,
+          quantity: o.quantity || 1,
+          timestamp: o.observed_at || o.created_at,
+          author_name: o.source_name || 'Discord',
+          original_text: o.raw_text || ''
+        };
+      });
+      notify(`Connected to Supabase · ${items.length} items catalogued · ${observations.length.toLocaleString()} observations loaded live!`, "good");
+    } else {
+      notify("Connected to Supabase. Database is currently empty. Use Bulk Import or Load CSV to populate.", "info");
+    }
+    render();
+    renderHistory();
+    renderCatalogue();
+  } catch (err) {
+    notify(`Supabase connection error: ${err.message}. You can load local CSV files directly below.`, "bad");
+  }
+}
+
+// File Drop & Local Load
 let dropZone = $('dropZone');
 dropZone.onclick = () => $('localCsvFile').click();
 dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('dragover'); };
@@ -429,18 +545,18 @@ dropZone.ondrop = e => {
   e.preventDefault();
   dropZone.classList.remove('dragover');
   let file = e.dataTransfer.files[0];
-  if (file) loadFile(file);
+  if (file) loadLocalFile(file);
 };
-$('localCsvFile').onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]); };
+$('localCsvFile').onchange = e => { if (e.target.files[0]) loadLocalFile(e.target.files[0]); };
 
-function loadFile(file) {
+function loadLocalFile(file) {
   let reader = new FileReader();
   reader.onload = ev => {
     observations = processCSVText(ev.target.result);
     render();
     renderHistory();
     renderCatalogue();
-    dropZone.innerHTML = `<span style="color:var(--buy);font-weight:700">✅ Loaded ${observations.length.toLocaleString()} records from ${file.name}</span>`;
+    dropZone.innerHTML = `<span style="color:var(--buy);font-weight:700">✅ Loaded ${observations.length.toLocaleString()} records locally from ${file.name}</span>`;
   };
   reader.readAsText(file);
 }
@@ -527,7 +643,7 @@ function render() {
   }).join('') || '<tr><td colspan="8" style="text-align:center;padding:30px;" class="muted">No matching items found.</td></tr>';
 }
 
-// Modal Detail Window Logic
+// Modal Detail Window
 function openDetailModal(itemName) {
   selectedModalItem = itemName;
   let groupObs = observations.filter(o => o.item.toLowerCase() === itemName.toLowerCase())
@@ -554,10 +670,8 @@ function openDetailModal(itemName) {
   $('mSell').textContent = money(minSell);$('mMed').textContent = money(median);
   $('mAvg').textContent = money(avg);$('mCount').textContent = groupObs.length;
 
-  // Render modal chart
   renderModalChart(groupObs, allPrices);
 
-  // Render Modal History
   $('modalTradeRows').innerHTML = groupObs.slice().reverse().map(o => `
     <tr>
       <td><small style="color:var(--text-muted)">${esc(fmtTime(o.timestamp))}</small></td>
@@ -607,9 +721,137 @@ function renderModalChart(groupObs, allPrices) {
   $('chartRange').textContent = `${fmtTime(groupObs[0].timestamp)} → ${fmtTime(groupObs[groupObs.length - 1].timestamp)}`;
 }
 
-// Close Modal handlers
-$('modalCloseBtn').onclick = () => $('detailModal').classList.remove('open');$('detailModal').onclick = e => { if (e.target === $('detailModal'))$('detailModal').classList.remove('open'); };
-document.addEventListener('keydown', e => { if (e.key === 'Escape') $('detailModal').classList.remove('open'); });
+$('modalCloseBtn').onclick = () =>$('detailModal').classList.remove('open');
+$('authCloseBtn').onclick = () =>$('authModal').classList.remove('open');
+$('loginBtn').onclick = () =>$('authModal').classList.add('open');
+
+// Supabase Auth Login / Logout
+$('signInBtn').onclick = async () => {
+  if (!client) return alert('Supabase client not initialized.');
+  let email = $('authEmail').value, password =$('authPassword').value;
+  $('authMsg').textContent = 'Authenticating...';
+  let { data, error } = await client.auth.signInWithPassword({ email, password });
+  if (error) {
+    $('authMsg').textContent = error.message;
+  } else {
+    $('authMsg').textContent = '';$('authModal').classList.remove('open');
+    checkUserAuth();
+  }
+};
+
+$('logoutBtn').onclick = async () => {
+  if (client) await client.auth.signOut();
+  checkUserAuth();
+};
+
+async function checkUserAuth() {
+  if (!client) return;
+  try {
+    let { data: { user } } = await client.auth.getUser();
+    isAdmin = user?.id === ADMIN_ID;
+    if (user) {
+      $('identityPill').textContent = isAdmin ? '👑 Admin Connected' : `👤 ${user.email}`;
+      $('loginBtn').classList.add('hide');$('logoutBtn').classList.remove('hide');
+    } else {
+      $('identityPill').textContent = '⚡ Supabase: Public Viewer';
+      $('loginBtn').classList.remove('hide');$('logoutBtn').classList.add('hide');
+    }
+  } catch (err) {
+    $('identityPill').textContent = '⚡ Supabase: Public Viewer';
+  }
+}
+
+// Bulk Parse & Store into Supabase
+$('bulkParseBtn').onclick = async () => {
+  let fileInput = $('bulkFileInput');
+  let rawContent = fileInput.files?.[0] ? await fileInput.files[0].text() : $('bulkPasteText').value;
+
+  if (!rawContent.trim()) return alert('Please paste CSV text or select a CSV file first.');
+
+  staged = processCSVText(rawContent);
+  $('bulkPreviewRows').innerHTML = staged.slice(0, 300).map((row, i) => `
+    <tr>
+      <td><input type="checkbox" class="chk-staged" data-idx="${i}" ${row.selected ? 'checked' : ''}></td>
+      <td><small>${esc(fmtTime(row.timestamp))}</small></td>
+      <td><strong>${esc(row.item)}</strong></td>
+      <td><small style="color:var(--text-muted)">${esc(row.category)}</small></td>
+      <td><span class="badge ${row.listing_type === 'buy' ? 'badge-buy' : 'badge-sell'}">${esc(row.listing_type)}</span></td>
+      <td style="font-weight:700;color:${row.listing_type === 'buy' ? 'var(--buy)' : 'var(--sell)'}">${money(row.price)}</td>
+      <td>${row.quantity}</td>
+      <td><small style="color:var(--text-muted)">@${esc(row.author_name)}</small></td>
+    </tr>
+  `).join('');
+
+  document.querySelectorAll('.chk-staged').forEach(chk => {
+    chk.onchange = e => {
+      let idx = Number(e.target.dataset.idx);
+      if (staged[idx]) staged[idx].selected = e.target.checked;
+    };
+  });
+
+  $('bulkStatus').textContent = `Parsed ${staged.length.toLocaleString()} rows. Ready to store into Supabase database.`;
+  $('bulkCommitBtn').disabled = false;
+};
+
+// COMMIT / STORE INTO SUPABASE DB
+$('bulkCommitBtn').onclick = async () => {
+  let selected = staged.filter(s => s.selected);
+  if (!selected.length) return alert('No rows selected for import.');
+
+  if (!confirm(`Confirm storing ${selected.length.toLocaleString()} market listings into Supabase database?`)) return;
+
+  $('bulkCommitBtn').disabled = true;
+  $('bulkStatus').textContent = `Syncing ${selected.length.toLocaleString()} rows to Supabase database...`;
+
+  if (client) {
+    try {
+      let count = 0;
+      // Step 1: Ensure Catalogue items exist
+      let { data: existingItems } = await client.from('items').select('*');
+      let itemMap = new Map((existingItems || []).map(i => [i.name.toLowerCase(), i.id]));
+
+      for (let row of selected) {
+        let key = row.item.toLowerCase();
+        let itemId = itemMap.get(key);
+
+        if (!itemId) {
+          let { data: newItem, error: errI } = await client.from('items')
+            .insert({ name: row.item, category: row.category, verification_status: 'Community CSV' })
+            .select('id').single();
+          if (newItem) {
+            itemId = newItem.id;
+            itemMap.set(key, itemId);
+          }
+        }
+
+        if (itemId) {
+          await client.from('price_observations').insert({
+            item_id: itemId,
+            price: row.price,
+            quantity: row.quantity || 1,
+            listing_type: row.listing_type,
+            source_name: row.author_name,
+            raw_text: row.original_text,
+            observed_at: row.timestamp
+          });
+          count++;
+        }
+      }
+      alert(`✅ Successfully stored ${count.toLocaleString()} trade listings in Supabase cloud database!`);
+      await loadFromSupabase();
+      page('market');
+    } catch (err) {
+      alert(`Supabase Storage Error: ${err.message}`);
+    }
+  } else {
+    // In-memory fallback
+    observations = [...observations, ...selected];
+    render();
+    renderHistory();
+    renderCatalogue();
+    alert(`Successfully loaded ${selected.length.toLocaleString()} rows in local memory!`);
+  }
+};
 
 function renderHistory() {
   let search = ($('feedSearch')?.value || '').toLowerCase();
@@ -645,6 +887,8 @@ $('dirFilter').onchange = render;
 $('manualCat').innerHTML = cats.filter(c => c !== 'ALL').map(c => `<option>${c}</option>`).join('');
 
 initPills();
+checkUserAuth();
+loadFromSupabase();
 </script>
 </body>
 </html>
