@@ -230,19 +230,32 @@ section{margin-top:16px}
 const URL_BASE = 'https://debencvoeryzbiopeufr.supabase.co';
 const KEY = 'sb_publishable_EnJD8dkQqTQGYZ7B2oHA5A_lIUnb3at';
 const ADMIN = '1f6ac2d0-ad1c-4ada-947a-630229bc8ccb';
-const client = window.supabase.createClient(URL_BASE, KEY);
 
 const $ = id => document.getElementById(id);
+const notice = (s, error = false) => {
+  let el = $('notice');
+  if (el) {
+    el.textContent = s;
+    el.className = 'panel ' + (error ? 'bad' : 'muted');
+  }
+};
+
+let client = null;
+try {
+  if (window.supabase && typeof window.supabase.createClient === 'function') {
+    client = window.supabase.createClient(URL_BASE, KEY);
+  } else {
+    notice('Failed to load Supabase SDK from CDN. Please refresh or check connection.', true);
+  }
+} catch (err) {
+  notice('Supabase Client Init Error: ' + err.message, true);
+}
+
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = n => Number(n).toLocaleString('en-US', {maximumFractionDigits: 2});
 const cats = ['Tome','Sigil','Chestplate','Legs','Helmet','Weapon','Relic','Scroll','Material','Consumable','Other'];
 
-let items = [], variants = [], observations = [], admin = false, staged = [], loadedFile = null;
-
-const notice = (s, error = false) => {
-  $('notice').textContent = s;
-  $('notice').className = 'panel ' + (error ? 'bad' : 'muted');
-};
+let items = [], variants = [], observations = [], admin = false, staged = [], loadedFile = null, reviewReport = [];
 
 function page(p) {
   document.querySelectorAll('main>section').forEach(x => x.classList.toggle('hide', x.id !== p));
@@ -311,8 +324,10 @@ function renderTrend(groupKey) {
   let minP = Math.min(...prices), maxP = Math.max(...prices);
 
   $('cardAvg').textContent = money(e.avg);
-  $('cardMed').textContent = money(e.median);$('cardMin').textContent = money(minP);
-  $('cardMax').textContent = money(maxP);$('cardCount').textContent = `${groupObs.length} obs`;
+  $('cardMed').textContent = money(e.median);
+  $('cardMin').textContent = money(minP);
+  $('cardMax').textContent = money(maxP);
+  $('cardCount').textContent = `${groupObs.length} obs`;
 
   let trendText = '🟢 Stable';
   if (groupObs.length >= 2) {
@@ -369,7 +384,7 @@ function render() {
     groups.get(k).obs.push(o);
   }
 
-  let search = $('search').value.toLowerCase(), type =$('filter').value;
+  let search = $('search').value.toLowerCase(), type = $('filter').value;
   $('marketRows').innerHTML = [...groups.values()].filter(g => g.type === type && g.item?.name.toLowerCase().includes(search)).map(g => {
     let e = estimate(g.prices), minP = Math.min(...g.prices), maxP = Math.max(...g.prices);
     let sortedObs = [...g.obs].sort((a, b) => new Date(b.observed_at || 0) - new Date(a.observed_at || 0));
@@ -379,30 +394,37 @@ function render() {
 }
 
 async function allRows(table, columns = '*') {
+  if (!client) return [];
   let rows = [];
   for (let from = 0; ; from += 1000) {
     let {data, error} = await client.from(table).select(columns).order('id').range(from, from + 999);
     if (error) throw error;
-    rows.push(...data);
-    if (data.length < 1000) break;
+    if (data) rows.push(...data);
+    if (!data || data.length < 1000) break;
   }
   return rows;
 }
 
 async function load() {
+  if (!client) return;
   try {
     notice('Loading market…');
     items = await allRows('items');
     variants = await allRows('equipment_variants');
+    
     if (admin) {
       observations = await allRows('price_observations', 'id,item_id,variant_id,price,quantity,listing_type,observed_at,source_name,confidence');
     } else {
       observations = [];
-      for (let from = 0; ; from += 1000) {
-        let {data, error} = await client.rpc('public_market_observations').range(from, from + 999);
-        if (error) throw error;
-        observations.push(...data);
-        if (data.length < 1000) break;
+      try {
+        observations = await allRows('price_observations', 'id,item_id,variant_id,price,quantity,listing_type,observed_at,source_name,confidence');
+      } catch (tableErr) {
+        for (let from = 0; ; from += 1000) {
+          let {data, error} = await client.rpc('public_market_observations').range(from, from + 999);
+          if (error) throw error;
+          if (data) observations.push(...data);
+          if (!data || data.length < 1000) break;
+        }
       }
     }
     render();
@@ -413,22 +435,30 @@ async function load() {
 }
 
 async function session() {
-  let {data: {user}} = await client.auth.getUser();
-  admin = user?.id === ADMIN;
-  $('identity').textContent = admin ? 'Admin connected' : 'Public viewer';
-  document.querySelectorAll('.admin').forEach(x => x.classList.toggle('hide', !admin));
-  $('loginBtn').classList.toggle('hide', !!user);$('logoutBtn').classList.toggle('hide', !user);
-  if (user && !admin) notice('This account is not authorised to edit.', true);
-  await load();
+  if (!client) return;
+  try {
+    let {data: {user}} = await client.auth.getUser();
+    admin = user?.id === ADMIN;
+    $('identity').textContent = admin ? 'Admin connected' : 'Public viewer';
+    document.querySelectorAll('.admin').forEach(x => x.classList.toggle('hide', !admin));
+    $('loginBtn').classList.toggle('hide', !!user);$('logoutBtn').classList.toggle('hide', !user);
+    if (user && !admin) notice('This account is not authorised to edit.', true);
+    await load();
+  } catch (e) {
+    notice('Session Auth Check Failed: ' + e.message, true);
+    await load();
+  }
 }
 
 $('loginBtn').onclick = () => page('auth');$('signIn').onclick = async () => {
+  if (!client) return notice('Supabase client not connected', true);
   let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});$('password').value = '';
   if (error) return notice(error.message, true);
   await session();
   page('market');
 };
 $('logoutBtn').onclick = async () => {
+  if (!client) return;
   await client.auth.signOut();
   await session();
   page('market');
@@ -475,7 +505,13 @@ $('addItem').onclick = () => guard(async () => {
   $('itemName').value = '';
 });
 
-// RFC-4180 Compliant CSV Parser
+$('addObs').onclick = () => guard(async () => {
+  let i = items.find(x => x.id === Number($('obsItem').value)), p = numeric($('obsPrice').value);
+  if (!i || !Number.isFinite(p) || p <= 0) throw Error('Select an item and valid price');
+  await saveObservation({name: i.name, category: i.category, price: p, status: $('obsType').value, rarity: $('rarity').value, enchantment:$('enchant').value, upgrade: $('upgrade').value, stats:$('stats').value, source: $('source').value, raw:$('raw').value});
+  $('obsPrice').value = '';$('raw').value = '';
+});
+
 function parseCSV(text) {
   let rows = [], row = [], cur = '', inQuotes = false;
   for (let i = 0; i < text.length; i++) {
@@ -520,7 +556,6 @@ function parseLine(line, headers, recordMeta) {
 
   let direction = /\b(WTB|LF|buying|looking for)\b/i.test(clean) ? 'buy' : /\b(sold|completed sale|sold for)\b/i.test(clean) ? 'sold' : 'sell';
 
-  // 1. EXTRACT QUANTITY FIRST
   let quantity = 1;
   let qtyMatch = clean.match(/\b(?:(\d+)\s*x|x\s*(\d+)|qty\s*[:=]?\s*(\d+))\b/i);
   if (qtyMatch) {
@@ -529,11 +564,9 @@ function parseLine(line, headers, recordMeta) {
   }
   let cleanNoQty = clean.replace(/\b(?:\d+\s*x|x\s*\d+|qty\s*[:=]?\s*\d+)\b/gi, ' ');
 
-  // 2. MATCH KNOWN CATALOGUE ITEMS
   let known = items.filter(i => new RegExp('(^|[^a-z0-9])' + i.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=$|[^a-z0-9])', 'i').test(cleanNoQty)).sort((a,b) => b.name.length - a.name.length);
   let item = known[0];
 
-  // 3. STRICT PRICE SEARCH
   let price = null;
   let priceMatch = cleanNoQty.match(/\b(?:for|price|asking|offer(?:ing)?|paying|sold(?:\s+for)?)\s*[:=]?\s*(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb]?)\b/i);
   if (priceMatch) {
@@ -571,8 +604,6 @@ function parseLine(line, headers, recordMeta) {
   return {name, price, quantity, status: direction, category: item?.category || 'Other', rarity: rarity?.[1] || '', enchantment: enchant?.[1]?.trim() || '', upgrade: upgrade?.[1] || '', stats, source: recordMeta?.source || '', timestamp: recordMeta?.timestamp || '', raw: cleanStr};
 }
 
-let reviewReport = [];
-
 $('bulkFile').onchange = e => {
   let f = e.target.files?.[0];
   if (!f) return;
@@ -588,7 +619,6 @@ $('bulkFile').onchange = e => {
   $('parseStatus').textContent = `Loaded file: ${f.name} (${sizeMb} MB). Ready to preview.`;
 };
 
-// CHUNKED ASYNCHRONOUS PARSER
 $('parse').onclick = async () => {$('parse').disabled = true;
   $('parseStatus').textContent = 'Reading file content into memory…';
 
@@ -619,8 +649,6 @@ $('parse').onclick = async () => {$('parse').disabled = true;
 
   staged = []; reviewReport = []; let ignored = 0, reviewed = 0, duplicates = 0;
   let seenKeys = new Set();
-
-  let totalRows = isDiscordExport ? csvRows.length - 1 : linesCount(rawContent);
   let processedCount = 0;
 
   if (isDiscordExport) {
@@ -675,7 +703,7 @@ $('parse').onclick = async () => {$('parse').disabled = true;
       processedCount = Math.min(i + chunkSize, rowsToProcess.length);
       let pct = Math.round((processedCount / rowsToProcess.length) * 100);
       $('parseStatus').textContent = `Chunked parsing in progress: ${processedCount.toLocaleString()} / ${rowsToProcess.length.toLocaleString()} rows (${pct}%)…`;
-      await new Promise(r => setTimeout(r, 0)); // Yield to main thread
+      await new Promise(r => setTimeout(r, 0));
     }
   } else {
     let lines = rawContent.split(/\r?\n/), headers = isStandardCsv ? firstHeader : null;
@@ -730,12 +758,6 @@ $('parse').onclick = async () => {$('parse').disabled = true;
   document.querySelectorAll('[data-check]').forEach(x => x.onchange = () => staged[Number(x.dataset.check)].selected = x.checked);
   $('commit').disabled = !staged.some(x => x.selected);$('parse').disabled = false;
 };
-
-function linesCount(s) {
-  let count = 0;
-  for (let i = 0; i < s.length; i++) if (s[i] === '\n') count++;
-  return count || 1;
-}
 
 $('reviewExport').onclick = () => {
   let blob = new Blob([JSON.stringify({parsed: staged, review: reviewReport}, null, 2)], {type: 'application/json'}), u = URL.createObjectURL(blob), a = document.createElement('a');
