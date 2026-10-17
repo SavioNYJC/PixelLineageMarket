@@ -191,10 +191,10 @@ section{margin-top:16px}
   <section id="bulk" class="hide">
     <div class="panel">
       <h2>Bulk import</h2>
-      <p class="muted">For predictable imports use CSV with columns <code>item,price,status,category,rarity,enchantment,upgrade,stats,source,timestamp</code>. Free-form lines like <code>Fire Tome - 120k</code> are also accepted. Automatic deduplication prevents duplicate entries in your database.</p>
+      <p class="muted">Supports standardized CSVs and Discord full archive exports (e.g. <code>discord_FullArchive.csv</code>). Automatic deduplication prevents duplicate entries in your database.</p>
       <label>Paste text or upload a .txt/.csv export</label>
       <input id="bulkFile" type="file" accept=".txt,.csv,.log,text/plain,text/csv">
-      <textarea id="bulkText" placeholder="Paste Discord messages here. Messages without prices go to review, not the price database."></textarea>
+      <textarea id="bulkText" placeholder="Paste Discord messages or CSV data here."></textarea>
       <p class="muted">Only known catalogue items or clearly formatted Item - Price entries are auto-accepted. Ambiguous messages are reviewed; ordinary chatter and duplicate messages are ignored.</p>
       <div class="row">
         <button id="parse">Preview & Deduplicate</button>
@@ -312,10 +312,8 @@ function renderTrend(groupKey) {
   let minP = Math.min(...prices), maxP = Math.max(...prices);
 
   $('cardAvg').textContent = money(e.avg);
-  $('cardMed').textContent = money(e.median);
-  $('cardMin').textContent = money(minP);
-  $('cardMax').textContent = money(maxP);
-  $('cardCount').textContent = `${groupObs.length} obs`;
+  $('cardMed').textContent = money(e.median);$('cardMin').textContent = money(minP);
+  $('cardMax').textContent = money(maxP);$('cardCount').textContent = `${groupObs.length} obs`;
 
   let trendText = '🟢 Stable';
   if (groupObs.length >= 2) {
@@ -373,7 +371,7 @@ function render() {
     groups.get(k).obs.push(o);
   }
 
-  let search = $('search').value.toLowerCase(), type = $('filter').value;
+  let search = $('search').value.toLowerCase(), type =$('filter').value;
   $('marketRows').innerHTML = [...groups.values()].filter(g => g.type === type && g.item?.name.toLowerCase().includes(search)).map(g => {
     let e = estimate(g.prices), minP = Math.min(...g.prices), maxP = Math.max(...g.prices);
     let sortedObs = [...g.obs].sort((a, b) => new Date(b.observed_at || 0) - new Date(a.observed_at || 0));
@@ -421,16 +419,13 @@ async function session() {
   admin = user?.id === ADMIN;
   $('identity').textContent = admin ? 'Admin connected' : 'Public viewer';
   document.querySelectorAll('.admin').forEach(x => x.classList.toggle('hide', !admin));
-  $('loginBtn').classList.toggle('hide', !!user);
-  $('logoutBtn').classList.toggle('hide', !user);
+  $('loginBtn').classList.toggle('hide', !!user);$('logoutBtn').classList.toggle('hide', !user);
   if (user && !admin) notice('This account is not authorised to edit.', true);
   await load();
 }
 
-$('loginBtn').onclick = () => page('auth');
-$('signIn').onclick = async () => {
-  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});
-  $('password').value = '';
+$('loginBtn').onclick = () => page('auth');$('signIn').onclick = async () => {
+  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});$('password').value = '';
   if (error) return notice(error.message, true);
   await session();
   page('market');
@@ -474,7 +469,7 @@ async function guard(fn) {
 }
 
 $('addItem').onclick = () => guard(async () => {
-  let name = $('itemName').value.trim(), url = $('itemWiki').value.trim();
+  let name = $('itemName').value.trim(), url =$('itemWiki').value.trim();
   if (!name) throw Error('Item name required');
   if (url && !/^https:\/\//.test(url)) throw Error('Use an HTTPS wiki URL');
   let {error} = await client.from('items').insert({name, category: $('itemCat').value, wiki_url: url || null, verification_status: 'unverified'});
@@ -485,41 +480,53 @@ $('addItem').onclick = () => guard(async () => {
 $('addObs').onclick = () => guard(async () => {
   let i = items.find(x => x.id === Number($('obsItem').value)), p = numeric($('obsPrice').value);
   if (!i || !Number.isFinite(p) || p <= 0) throw Error('Select an item and valid price');
-  await saveObservation({name: i.name, category: i.category, price: p, status: $('obsType').value, rarity: $('rarity').value, enchantment: $('enchant').value, upgrade: $('upgrade').value, stats: $('stats').value, source: $('source').value, raw: $('raw').value});
-  $('obsPrice').value = '';
-  $('raw').value = '';
+  await saveObservation({name: i.name, category: i.category, price: p, status: $('obsType').value, rarity: $('rarity').value, enchantment:$('enchant').value, upgrade: $('upgrade').value, stats:$('stats').value, source: $('source').value, raw:$('raw').value});
+  $('obsPrice').value = '';$('raw').value = '';
 });
 
-function csv(s) {
-  let a = [], v = '', quote = false;
-  for (let i = 0; i < s.length; i++) {
-    let c = s[i];
+// RFC-4180 Compliant CSV Parser
+function parseCSV(text) {
+  let rows = [], row = [], cur = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    let c = text[i], next = text[i+1];
     if (c === '"') {
-      if (quote && s[i + 1] === '"') { v += '"'; i++; }
-      else quote = !quote;
-    } else if (c === ',' && !quote) { a.push(v.trim()); v = ''; }
-    else v += c;
+      if (inQuotes && next === '"') { cur += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (c === ',' && !inQuotes) {
+      row.push(cur.trim()); cur = '';
+    } else if ((c === '\r' || c === '\n') && !inQuotes) {
+      if (c === '\r' && next === '\n') i++;
+      row.push(cur.trim());
+      if (row.some(x => x !== '')) rows.push(row);
+      row = []; cur = '';
+    } else {
+      cur += c;
+    }
   }
-  a.push(v.trim());
-  return a;
+  if (cur || row.length) {
+    row.push(cur.trim());
+    if (row.some(x => x !== '')) rows.push(row);
+  }
+  return rows;
 }
 
 function status(s) {
-  return /^(sold|sale|completed)$/i.test(s) ? 'sold' : /^(buy|offer|wtb)$/i.test(s) ? 'buy' : 'sell';
+  return /^(sold|sale|completed)$/i.test(s) ? 'sold' : /^(buy\vert{}offer\vert{}wtb)$/i.test(s) ? 'buy' : 'sell';
 }
 
-function parseLine(line, headers) {
-  if (headers) {
-    let vals = csv(line), o = {};
+function parseLine(line, headers, recordMeta) {
+  if (headers && !recordMeta?.isDiscord) {
+    let vals = Array.isArray(line) ? line : csv(line), o = {};
     headers.forEach((h, i) => o[h] = vals[i] || '');
     let p = numeric(o.price);
     if (!o.item || !Number.isFinite(p) || p <= 0) return null;
-    return {name: o.item, price: p, status: status(o.status), category: o.category || items.find(i => i.name.toLowerCase() === o.item.toLowerCase())?.category || 'Other', rarity: o.rarity || '', enchantment: o.enchantment || '', upgrade: o.upgrade || '', stats: o.stats || '', source: o.source || '', timestamp: o.timestamp || o.observed_at || o.time || '', raw: line};
+    return {name: o.item, price: p, status: status(o.status), category: o.category || items.find(i => i.name.toLowerCase() === o.item.toLowerCase())?.category || 'Other', rarity: o.rarity || '', enchantment: o.enchantment || '', upgrade: o.upgrade || '', stats: o.stats || '', source: o.source || recordMeta?.source || '', timestamp: o.timestamp || o.observed_at || recordMeta?.timestamp || '', raw: typeof line === 'string' ? line : line.join(',')};
   }
-  let clean = line.replace(/<@!?\d+>|<#\d+>/g, ' ').replace(/https?:\/\/\S+/g, ' ').replace(/\s+/g, ' ').trim();
+  let cleanStr = typeof line === 'string' ? line : String(line);
+  let clean = cleanStr.replace(/<@!?\d+>|<#\d+>/g, ' ').replace(/https?:\/\/\S+/g, ' ').replace(/\s+/g, ' ').trim();
   if (!clean) return null;
   let direction = /\b(WTB|LF|buying|looking for)\b/i.test(clean) ? 'buy' : /\b(sold|completed sale|sold for)\b/i.test(clean) ? 'sold' : 'sell';
-  let known = items.filter(i => new RegExp('(^|[^a-z0-9])' + i.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=$|[^a-z0-9])', 'i').test(clean)).sort((a, b) => b.name.length - a.name.length);
+  let known = items.filter(i => new RegExp('(^|[^a-z0-9])' + i.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=$|[^a-z0-9])', 'i').test(clean)).sort((a,b) => b.name.length - a.name.length);
   let item = known[0];
   let simple = clean.match(/^(?:WTS|WTB|LF|selling|buying)?\s*(.*?)\s+[-–—:=|]\s*(?:for\s*)?(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb]?)\s*$/i);
   let name = item?.name || simple?.[1]?.trim();
@@ -536,7 +543,7 @@ function parseLine(line, headers) {
   let upgrade = tail.match(/\b(?:upgrade|level)\s*[:=+]?\s*(\d+)\b/i);
   let statMatches = [...tail.matchAll(/\b(attack|atk|defen[cs]e|def|hp|health|crit(?:ical)?(?: chance| damage)?|magic|speed)\s*[:=]\s*\+?(\d+(?:\.\d+)?%?)/gi)];
   let stats = statMatches.map(m => m[1] + ': ' + m[2]).join('\n');
-  return {name, price: p, status: direction, category: item?.category || 'Other', rarity: rarity?.[1] || '', enchantment: enchant?.[1]?.trim() || '', upgrade: upgrade?.[1] || '', stats, source: '', timestamp: '', raw: line};
+  return {name, price: p, status: direction, category: item?.category || 'Other', rarity: rarity?.[1] || '', enchantment: enchant?.[1]?.trim() || '', upgrade: upgrade?.[1] || '', stats, source: recordMeta?.source || '', timestamp: recordMeta?.timestamp || '', raw: cleanStr};
 }
 
 let reviewReport = [];
@@ -544,45 +551,100 @@ let reviewReport = [];
 $('bulkFile').onchange = async e => {
   let f = e.target.files?.[0];
   if (!f) return;
-  if (f.size > 15 * 1024 * 1024) { notice('File exceeds 15 MB; split it into smaller exports.', true); return; }
-  $('bulkText').value = await f.text();
-  $('parseStatus').textContent = `Loaded ${f.name} (${f.size.toLocaleString()} bytes). Click Preview.`;
+  if (f.size > 25 * 1024 * 1024) { notice('File exceeds 25 MB; split it into smaller exports.', true); return; }
+  $('bulkText').value = await f.text();$('parseStatus').textContent = `Loaded ${f.name} (${f.size.toLocaleString()} bytes). Click Preview.`;
 };
 
 $('parse').onclick = () => {
-  let lines = $('bulkText').value.split(/\r?\n/), first = csv(lines[0] || '').map(s => s.toLowerCase().trim()), headers = first.includes('item') && first.includes('price') ? first : null;
+  let csvRows = parseCSV($('bulkText').value);
+  if (!csvRows.length) return;
+  
+  let firstHeader = csvRows[0].map(s => s.toLowerCase().trim());
+  let isDiscordExport = firstHeader.includes('content') || firstHeader.includes('message') || firstHeader.includes('author name');
+  let isStandardCsv = firstHeader.includes('item') && firstHeader.includes('price');
+
   staged = []; reviewReport = []; let ignored = 0, reviewed = 0, duplicates = 0;
   let seenKeys = new Set();
-  lines.slice(headers ? 1 : 0).forEach((line, i) => {
-    if (!line.trim()) return;
-    let o = parseLine(line, headers), lineNumber = i + 1 + (headers ? 1 : 0);
-    if (!o) {
-      let hasPrice = /\b\d[\d,]*(?:\.\d+)?\s*[kmb]\b|\b(?:price|for|paying|offer)\s*[:=]?\s*\d/i.test(line);
-      let hasItem = items.some(x => line.toLowerCase().includes(x.name.toLowerCase()));
-      let classification = hasPrice || hasItem ? 'REVIEW' : 'IGNORED';
-      if (classification === 'REVIEW') reviewed++; else ignored++;
-      reviewReport.push({line: lineNumber, classification, text: line});
-      return;
-    }
-    let dedupKey = [o.name.toLowerCase(), o.price, o.status, o.source, o.timestamp || ''].join('|');
-    let existsInDb = observations.some(obs => {
-      let itemName = items.find(it => it.id === obs.item_id)?.name || '';
-      return itemName.toLowerCase() === o.name.toLowerCase() && Number(obs.price) === o.price && obs.listing_type === o.status && (obs.observed_at === o.timestamp || obs.source_name === o.source);
+
+  if (isDiscordExport) {
+    let contentIdx = firstHeader.findIndex(h => h === 'content' || h === 'message');
+    let timeIdx = firstHeader.findIndex(h => h === 'timestamp' || h === 'created_at' || h === 'date');
+    let authorIdx = firstHeader.findIndex(h => h === 'author name' || h === 'author' || h === 'channel');
+
+    csvRows.slice(1).forEach((row, i) => {
+      let text = row[contentIdx] || '';
+      let ts = row[timeIdx] || '';
+      let src = row[authorIdx] || 'Discord';
+      let lineNumber = i + 2;
+
+      if (!text.trim()) return;
+
+      let subLines = text.split(/\r?\n/);
+      subLines.forEach(sub => {
+        if (!sub.trim()) return;
+        let o = parseLine(sub, null, {isDiscord: true, timestamp: ts, source: src});
+        if (!o) {
+          let hasPrice = /\b\d[\d,]*(?:\.\d+)?\s*[kmb]\b|\b(?:price|for|paying|offer)\s*[:=]?\s*\d/i.test(sub);
+          let hasItem = items.some(x => sub.toLowerCase().includes(x.name.toLowerCase()));
+          let classification = hasPrice || hasItem ? 'REVIEW' : 'IGNORED';
+          if (classification === 'REVIEW') reviewed++; else ignored++;
+          reviewReport.push({line: lineNumber, classification, text: sub});
+          return;
+        }
+
+        let dedupKey = [o.name.toLowerCase(), o.price, o.status, o.source, o.timestamp || ''].join('|');
+        let existsInDb = observations.some(obs => {
+          let itemName = items.find(it => it.id === obs.item_id)?.name || '';
+          return itemName.toLowerCase() === o.name.toLowerCase() && Number(obs.price) === o.price && obs.listing_type === o.status && (obs.observed_at === o.timestamp || obs.source_name === o.source);
+        });
+
+        if (seenKeys.has(dedupKey) || existsInDb) {
+          duplicates++;
+          staged.push({...o, selected: false, isDuplicate: true});
+          reviewReport.push({line: lineNumber, classification: 'DUPLICATE', text: sub});
+          return;
+        }
+        seenKeys.add(dedupKey);
+        staged.push({...o, selected: true, isDuplicate: false});
+      });
     });
-    if (seenKeys.has(dedupKey) || existsInDb) {
-      duplicates++;
-      staged.push({...o, selected: false, isDuplicate: true});
-      reviewReport.push({line: lineNumber, classification: 'DUPLICATE', text: line});
-      return;
-    }
-    seenKeys.add(dedupKey);
-    staged.push({...o, selected: true, isDuplicate: false});
-  });
+  } else {
+    let lines = $('bulkText').value.split(/\r?\n/), headers = isStandardCsv ? firstHeader : null;
+    lines.slice(headers ? 1 : 0).forEach((line, i) => {
+      if (!line.trim()) return;
+      let o = parseLine(line, headers), lineNumber = i + 1 + (headers ? 1 : 0);
+      if (!o) {
+        let hasPrice = /\b\d[\d,]*(?:\.\d+)?\s*[kmb]\b|\b(?:price|for|paying|offer)\s*[:=]?\s*\d/i.test(line);
+        let hasItem = items.some(x => line.toLowerCase().includes(x.name.toLowerCase()));
+        let classification = hasPrice || hasItem ? 'REVIEW' : 'IGNORED';
+        if (classification === 'REVIEW') reviewed++; else ignored++;
+        reviewReport.push({line: lineNumber, classification, text: line});
+        return;
+      }
+
+      let dedupKey = [o.name.toLowerCase(), o.price, o.status, o.source, o.timestamp || ''].join('|');
+      let existsInDb = observations.some(obs => {
+        let itemName = items.find(it => it.id === obs.item_id)?.name || '';
+        return itemName.toLowerCase() === o.name.toLowerCase() && Number(obs.price) === o.price && obs.listing_type === o.status && (obs.observed_at === o.timestamp || obs.source_name === o.source);
+      });
+
+      if (seenKeys.has(dedupKey) || existsInDb) {
+        duplicates++;
+        staged.push({...o, selected: false, isDuplicate: true});
+        reviewReport.push({line: lineNumber, classification: 'DUPLICATE', text: line});
+        return;
+      }
+      seenKeys.add(dedupKey);
+      staged.push({...o, selected: true, isDuplicate: false});
+    });
+  }
+
   $('parseStatus').textContent = `${staged.filter(x => !x.isDuplicate).length} new parsed · ${duplicates} duplicates skipped · ${reviewed} need review · ${ignored} ignored.`;
   $('rejected').textContent = reviewReport.map(x => `${x.line} [${x.classification}] ${x.text}`).join('\n');
   $('preview').innerHTML = staged.slice(0, 500).map((o, i) => 
     `<tr style="${o.isDuplicate ? 'opacity:0.5' : ''}"><td><input type="checkbox" data-check="${i}" ${o.selected ? 'checked' : ''}></td><td>${esc(o.name)}</td><td>${money(o.price)}</td><td>${esc(o.status)}</td><td><small>${esc(fmtTime(o.timestamp))}</small></td><td>${esc([o.rarity, o.enchantment, o.stats].filter(Boolean).join(' · '))}</td><td>${o.isDuplicate ? '<span class="bad">Duplicate</span>' : '<span class="good">New</span>'}</td></tr>`
   ).join('') + (staged.length > 500 ? '<tr><td colspan="7">Showing first 500.</td></tr>' : '');
+
   document.querySelectorAll('[data-check]').forEach(x => x.onchange = () => staged[Number(x.dataset.check)].selected = x.checked);
   $('commit').disabled = !staged.some(x => x.selected);
 };
