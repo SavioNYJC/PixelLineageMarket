@@ -61,7 +61,7 @@ section{margin-top:16px}
   </div>
 </header>
 <main>
-  <div id="notice" class="panel muted">Connecting to Supabase…</div>
+  <div id="notice" class="panel muted">Checking Supabase server connection…</div>
   <nav>
     <button data-page="market" class="primary">Market</button>
     <button data-page="catalogue">Items</button>
@@ -251,10 +251,9 @@ if (window.supabase && typeof window.supabase.createClient === 'function') {
   notice('Failed to load Supabase SDK from CDN. Check your internet connection or ad-blocker.', true);
 }
 
-// Timeout wrapper so network calls never hang indefinitely
-function withTimeout(promise, ms = 7000, label = 'Request') {
+function withTimeout(promise, ms = 6000, label = 'Request') {
   return new Promise((resolve, reject) => {
-    let timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms/1000}s. Check if Supabase database is paused or blocked.`)), ms);
+    let timer = setTimeout(() => reject(new Error(`${label} timed out after 6s. Your Supabase project is likely PAUSED in the dashboard or blocked by an ad-blocker.`)), ms);
     promise.then(res => { clearTimeout(timer); resolve(res); }, err => { clearTimeout(timer); reject(err); });
   });
 }
@@ -406,7 +405,7 @@ async function allRows(table, columns = '*') {
   let rows = [];
   for (let from = 0; ; from += 1000) {
     let req = client.from(table).select(columns).order('id').range(from, from + 999);
-    let {data, error} = await withTimeout(req, 8000, `Fetching ${table}`);
+    let {data, error} = await withTimeout(req, 6000, `Fetching ${table}`);
     if (error) throw error;
     if (data) rows.push(...data);
     if (!data || data.length < 1000) break;
@@ -430,7 +429,7 @@ async function load() {
       } catch (tableErr) {
         for (let from = 0; ; from += 1000) {
           let req = client.rpc('public_market_observations').range(from, from + 999);
-          let {data, error} = await withTimeout(req, 8000, 'Fetching market RPC');
+          let {data, error} = await withTimeout(req, 6000, 'Fetching market RPC');
           if (error) throw error;
           if (data) observations.push(...data);
           if (!data || data.length < 1000) break;
@@ -440,20 +439,19 @@ async function load() {
     render();
     notice(`Connected · ${items.length} items · ${observations.length} observations${admin ? ' · Admin mode' : ' · Public view'}`);
   } catch (e) {
-    notice('Cloud load failed: ' + e.message, true);
+    let msg = e.message || String(e);
+    notice(`Connection Error: ${msg}\n\n→ Check app.supabase.com to ensure your project is ACTIVE (not paused) and API keys are correct.`, true);
   }
 }
 
 async function init() {
   if (!client) return;
 
-  // 1. Trigger market load right away
   let dataLoadPromise = load();
 
-  // 2. Auth check with 3-second timeout guard
   try {
     let authReq = client.auth.getUser();
-    let res = await withTimeout(authReq, 3000, 'Auth check');
+    let res = await withTimeout(authReq, 2500, 'Auth check');
     let user = res?.data?.user;
     admin = user?.id === ADMIN;
 
@@ -788,28 +786,17 @@ $('reviewExport').onclick = () => {
 $('commit').onclick = () => guard(async () => {
   let selected = staged.filter(o => o.selected);
   if (!selected.length) throw Error('Select some rows');
-  if (!confirm(`Import ${selected.length.toLocaleString()} observations? This writes directly to Supabase.`)) return;
-  
+  if (!confirm(`Import ${selected.length} observations? This writes to the cloud.`)) return;
   let count = 0;
-  $('commit').disabled = true;
-
-  for (let i = 0; i < selected.length; i++) {
-    let o = selected[i];
-    try { 
-      await saveObservation(o); 
-      count++; 
-      if (count % 20 === 0 || count === selected.length) {
-        $('parseStatus').textContent = `Importing to Supabase cloud: ${count.toLocaleString()} / ${selected.length.toLocaleString()} (${Math.round(count / selected.length * 100)}%)…`;
-        await new Promise(r => setTimeout(r, 0));
-      }
-    }
+  for (let o of selected) {
+    try { await saveObservation(o); count++; }
     catch (e) {
-      $('parseStatus').textContent = `Imported ${count}; stopped on row ${count + 1}: ${e.message}. Successfully imported rows are saved.`;
+      $('parseStatus').textContent = `Imported ${count}; stopped on row ${count + 1}: ${e.message}. Successfully imported rows are already saved. Do not retry the full batch.`;
       throw e;
     }
   }
-  staged = [];
-  $('parseStatus').textContent = `Import completed! Successfully imported ${count.toLocaleString()} observations to Supabase.`;
+  staged = []; $('commit').disabled = true;
+  $('parseStatus').textContent = `Imported ${count} observations successfully.`;
 });
 
 init();
