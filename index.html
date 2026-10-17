@@ -121,7 +121,7 @@ section{margin-top:16px}
       <div class="row" style="margin-bottom:16px;background:#252033;padding:12px;border-radius:8px;border:1px solid #4a3e5e">
         <input type="file" id="localCsvFile" accept=".csv" style="display:none">
         <button class="secondary" onclick="$('localCsvFile').click()">📁 Load Local CSV File</button>
-        <span id="csvStatus" class="muted" style="font-size:13px">Load <code>cleaned_pixel_lineage_trades_v2.csv</code> to populate all 220k+ live trades instantly.</span>
+        <span id="csvStatus" class="muted" style="font-size:13px">Load <code>cleaned_pixel_lineage_trades_v2.csv</code> to populate live trades instantly.</span>
       </div>
 
       <div class="scroll">
@@ -228,16 +228,6 @@ section{margin-top:16px}
         </table>
       </div>
     </div>
-
-    <div class="panel admin hide">
-      <h3>Add Catalogue Item</h3>
-      <div class="grid">
-        <div><label>Exact Name</label><input id="itemName"></div>
-        <div><label>Category</label><select id="itemCat"></select></div>
-        <div><label>Wiki URL (optional)</label><input id="itemWiki"></div>
-      </div>
-      <button class="primary" id="addItem" style="margin-top:12px">Create Item</button>
-    </div>
   </section>
 
   <!-- EDITOR SECTION -->
@@ -306,58 +296,18 @@ section{margin-top:16px}
         <summary>View Review & Duplicate Log</summary>
         <pre id="rejected" style="white-space:pre-wrap;max-height:300px;overflow:auto;background:#15121e;padding:12px;border-radius:6px;font-size:12px"></pre>
       </details>
-      <button id="reviewExport" class="sm secondary" style="margin-top:8px">Download Review Report (JSON)</button>
-    </div>
-  </section>
-
-  <!-- AUTH SECTION -->
-  <section id="auth" class="hide">
-    <div class="panel" style="max-width:400px;margin:auto">
-      <h2>Admin Login</h2>
-      <label>Email</label><input id="email" type="email">
-      <label>Password</label><input id="password" type="password">
-      <button class="primary" id="signIn" style="width:100%;margin-top:16px">Sign In</button>
     </div>
   </section>
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 'use strict';
-const URL_BASE = 'https://debencvoeryzbiopeufr.supabase.co';
-const KEY = 'sb_publishable_EnJD8dkQqTQGYZ7B2oHA5A_lIUnb3at';
-const ADMIN = '1f6ac2d0-ad1c-4ada-947a-630229bc8ccb';
-
 const $ = id => document.getElementById(id);
-const notice = (s, error = false) => {
-  let el = $('notice');
-  if (el) {
-    el.textContent = s;
-    el.className = 'panel ' + (error ? 'bad' : 'muted');
-  }
-};
-
-let client = null;
-if (window.supabase && typeof window.supabase.createClient === 'function') {
-  try {
-    client = window.supabase.createClient(URL_BASE, KEY);
-  } catch (err) {
-    notice('Supabase init error: ' + err.message, true);
-  }
-}
-
-function withTimeout(promise, ms = 6000, label = 'Request') {
-  return new Promise((resolve, reject) => {
-    let timer = setTimeout(() => reject(new Error(`${label} timed out after 6s.`)), ms);
-    promise.then(res => { clearTimeout(timer); resolve(res); }, err => { clearTimeout(timer); reject(err); });
-  });
-}
-
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money = n => (n === null || n === undefined || isNaN(n)) ? '—' : Number(n).toLocaleString('en-US', {maximumFractionDigits: 0}) + ' Gold';
+const money = n => (n === null || n === undefined || isNaN(n) || n === '') ? '—' : Number(n).toLocaleString('en-US', {maximumFractionDigits: 0}) + ' Gold';
 const cats = ['Tome','Sigil','Heartblood','Heirloom','Material','Key','Equipment/Relic','Scroll','Other'];
 
-let items = [], observations = [], staged = [], reviewReport = [], admin = false, selectedItemKey = null;
+let items = [], observations = [], staged = [], selectedItemKey = null;
 
 function page(p) {
   document.querySelectorAll('main>section').forEach(x => x.classList.toggle('hide', x.id !== p));
@@ -366,18 +316,6 @@ function page(p) {
   if (p === 'catalogue') renderCatalogue();
 }
 document.querySelectorAll('[data-page]').forEach(b => b.onclick = () => page(b.dataset.page));
-
-function numeric(s) {
-  if (!s) return NaN;
-  let str = String(s).toLowerCase().replace(/[,$\s]/g, '');
-  let m = str.match(/^(\d+(?:\.\d+)?)([kmb])?$/);
-  if (m) {
-    let mult = {k: 1e3, m: 1e6, b: 1e9}[m[2]] || 1;
-    return Number(m[1]) * mult;
-  }
-  let raw = str.match(/\b\d{4,}\b/);
-  return raw ? parseInt(raw[0], 10) : NaN;
-}
 
 function fmtTime(t) {
   if (!t) return '—';
@@ -397,9 +335,89 @@ function estimate(a) {
   return { avg: a.reduce((s, v) => s + v, 0) / a.length, median: m, count: a.length, total: a.length };
 }
 
+function parseCSVLine(line) {
+  let result = [], current = '', inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    let c = line[i];
+    if (c === '"') inQuotes = !inQuotes;
+    else if (c === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+    else current += c;
+  }
+  result.push(current.trim());
+  return result.map(s => s.replace(/^"|"$/g, '').trim());
+}
+
+function processCSVText(text) {
+  let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) return [];
+
+  let headerCols = parseCSVLine(lines[0]).map(h => h.toLowerCase());
+  
+  // Dynamic column mapping based on header names
+  let idxItem = headerCols.findIndex(h => h === 'item' || h === 'item_name');
+  let idxCat = headerCols.findIndex(h => h === 'category');
+  let idxType = headerCols.findIndex(h => h === 'listing_type' || h === 'type' || h === 'direction');
+  let idxBuy = headerCols.findIndex(h => h === 'buy_price');
+  let idxSell = headerCols.findIndex(h => h === 'sell_price');
+  let idxPrice = headerCols.findIndex(h => h === 'price');
+  let idxQty = headerCols.findIndex(h => h === 'quantity' || h === 'qty');
+  let idxAuthor = headerCols.findIndex(h => h === 'author_name' || h === 'author' || h === 'user');
+  let idxTime = headerCols.findIndex(h => h === 'timestamp' || h === 'date');
+  let idxText = headerCols.findIndex(h => h === 'original_text' || h === 'content' || h === 'snippet');
+
+  let rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    let cols = parseCSVLine(lines[i]);
+    if (cols.length < 3) continue;
+
+    let item = idxItem >= 0 ? cols[idxItem] : cols[3] || 'Unspecified Item';
+    let category = idxCat >= 0 ? cols[idxCat] : cols[4] || 'Other';
+    let listingType = idxType >= 0 ? cols[idxType] : cols[5] || 'sell';
+    let buyP = idxBuy >= 0 ? parseInt(cols[idxBuy], 10) : null;
+    let sellP = idxSell >= 0 ? parseInt(cols[idxSell], 10) : null;
+    let priceP = idxPrice >= 0 ? parseInt(cols[idxPrice], 10) : (buyP || sellP || null);
+    let qty = idxQty >= 0 ? parseInt(cols[idxQty], 10) : 1;
+    let author = idxAuthor >= 0 ? cols[idxAuthor] : cols[2] || 'Trader';
+    let ts = idxTime >= 0 ? cols[idxTime] : cols[1] || new Date().toISOString();
+    let textSnippet = idxText >= 0 ? cols[idxText] : cols[10] || '';
+
+    if (!item || item.toLowerCase() === 'item') continue;
+
+    rows.push({
+      timestamp: ts,
+      author_name: author,
+      item: item,
+      category: category,
+      listing_type: listingType.toLowerCase().includes('buy') ? 'buy' : 'sell',
+      buy_price: isNaN(buyP) ? null : buyP,
+      sell_price: isNaN(sellP) ? null : sellP,
+      price: isNaN(priceP) ? null : priceP,
+      quantity: isNaN(qty) ? 1 : qty,
+      original_text: textSnippet
+    });
+  }
+  return rows;
+}
+
+// Local CSV File Upload Handler
+$('localCsvFile').onchange = e => {
+  let file = e.target.files?.[0];
+  if (!file) return;
+
+  $('csvStatus').textContent = `Loading ${file.name}...`;
+  let reader = new FileReader();
+  reader.onload = ev => {
+    observations = processCSVText(ev.target.result);
+    $('csvStatus').textContent = `Loaded ${observations.length.toLocaleString()} trade records from ${file.name}`;
+    render();
+    renderHistory();
+    renderCatalogue();
+  };
+  reader.readAsText(file);
+};
+
 function renderTrend(itemKey) {
   selectedItemKey = itemKey;
-
   document.querySelectorAll('.clickable-row').forEach(row => {
     row.classList.toggle('active-row', row.dataset.item === itemKey);
   });
@@ -410,38 +428,27 @@ function renderTrend(itemKey) {
   if (!groupObs.length) { $('trendPanel').classList.add('hide'); return; }
 
   $('trendPanel').classList.remove('hide');
-
   let sample = groupObs[0];
   $('trendItemTitle').textContent = `${sample.item} (${sample.category})`;
 
-  let buyPrices = groupObs.filter(o => (o.listing_type === 'buy' || o.buy_price) && (o.buy_price || o.price)).map(o => o.buy_price || o.price);
-  let sellPrices = groupObs.filter(o => (o.listing_type === 'sell' || o.sell_price) && (o.sell_price || o.price)).map(o => o.sell_price || o.price);
-  let allPrices = groupObs.map(o => o.price || o.sell_price || o.buy_price).filter(Boolean);
+  let buyPrices = groupObs.filter(o => o.listing_type === 'buy' && o.price).map(o => o.price);
+  let sellPrices = groupObs.filter(o => o.listing_type === 'sell' && o.price).map(o => o.price);
+  let allPrices = groupObs.map(o => o.price).filter(Boolean);
 
   let maxBuy = buyPrices.length ? Math.max(...buyPrices) : null;
   let minSell = sellPrices.length ? Math.min(...sellPrices) : null;
-
   let e = estimate(allPrices);
 
   $('cardBuy').textContent = money(maxBuy);
   $('cardSell').textContent = money(minSell);$('cardMed').textContent = money(e.median);
   $('cardAvg').textContent = money(e.avg);$('cardCount').textContent = `${groupObs.length} listings`;
 
-  let trendText = '🟢 Stable';
-  if (allPrices.length >= 2) {
-    let firstP = allPrices[0], lastP = allPrices[allPrices.length - 1];
-    let pct = ((lastP - firstP) / firstP) * 100;
-    if (pct > 2) trendText = `📈 +${pct.toFixed(1)}%`;
-    else if (pct < -2) trendText = `📉 ${pct.toFixed(1)}%`;
-  }
-  $('cardTrend').textContent = trendText;
-
   $('trendHistoryRows').innerHTML = groupObs.slice().reverse().map(o => `
     <tr>
       <td><small>${esc(fmtTime(o.timestamp))}</small></td>
       <td><span class="tag ${o.listing_type === 'buy' ? 'tag-buy' : 'tag-sell'}">${esc(o.listing_type)}</span></td>
-      <td class="${o.listing_type === 'buy' ? 'price-buy' : 'price-sell'}">${money(o.price || o.buy_price || o.sell_price)}</td>
-      <td><small class="muted">@${esc(o.author_name || o.source_name || 'Discord')}</small></td>
+      <td class="${o.listing_type === 'buy' ? 'price-buy' : 'price-sell'}">${money(o.price)}</td>
+      <td><small class="muted">@${esc(o.author_name)}</small></td>
       <td><small>${esc(o.original_text || '—')}</small></td>
     </tr>
   `).join('');
@@ -456,11 +463,11 @@ function renderTrend(itemKey) {
     if (maxT === minT) maxT = minT + 1;
 
     let points = groupObs.map(o => {
-      let price = o.price || o.sell_price || o.buy_price || 0;
+      let price = o.price || 0;
       let t = new Date(o.timestamp || 0).getTime();
       let x = p + ((t - minT) / (maxT - minT)) * (W - 2 * p);
       let y = H - p - ((price - minP) / rangeP) * (H - 2 * p);
-      return { x, y, price, t: fmtTime(o.timestamp), type: o.listing_type, author: o.author_name || 'Discord' };
+      return { x, y, price, t: fmtTime(o.timestamp), type: o.listing_type, author: o.author_name };
     });
 
     let poly = points.map(pt => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
@@ -472,16 +479,11 @@ function renderTrend(itemKey) {
 
     $('chartBox').innerHTML = `
       <svg viewBox="0 0 ${W} ${H}" class="svg-chart">
-        <line x1="${p}" y1="${p}" x2="${W-p}" y2="${p}" stroke="#322b40" stroke-dasharray="4" />
-        <line x1="${p}" y1="${H-p}" x2="${W-p}" y2="${H-p}" stroke="#322b40" stroke-dasharray="4" />
         <polyline fill="none" stroke="#7950c5" stroke-width="3" points="${poly}" />
         ${dots}
       </svg>
     `;
-    $('chartRangeInfo').textContent = `${fmtTime(groupObs[0].timestamp)} → ${fmtTime(groupObs[groupObs.length - 1].timestamp)}`;
   }
-
-  $('trendPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function render() {
@@ -490,36 +492,16 @@ function render() {
   let dir = $('filter').value;
 
   let itemMap = new Map();
-
   for (let o of observations) {
-    let itemName = o.item || 'Unknown Item';
-    let key = itemName.toLowerCase();
-
+    let key = o.item.toLowerCase();
     if (!itemMap.has(key)) {
-      itemMap.set(key, {
-        name: itemName,
-        category: o.category || 'Other',
-        buyPrices: [],
-        sellPrices: [],
-        allPrices: [],
-        lastTime: o.timestamp,
-        obsCount: 0
-      });
+      itemMap.set(key, { name: o.item, category: o.category, buyPrices: [], sellPrices: [], allPrices: [], lastTime: o.timestamp, obsCount: 0 });
     }
-
     let g = itemMap.get(key);
     g.obsCount++;
-
-    let p = o.price || o.buy_price || o.sell_price;
-    if (p) g.allPrices.push(p);
-
-    if (o.listing_type === 'buy' || o.buy_price) {
-      if (o.buy_price || o.price) g.buyPrices.push(o.buy_price || o.price);
-    }
-    if (o.listing_type === 'sell' || o.sell_price) {
-      if (o.sell_price || o.price) g.sellPrices.push(o.sell_price || o.price);
-    }
-
+    if (o.price) g.allPrices.push(o.price);
+    if (o.listing_type === 'buy' && o.price) g.buyPrices.push(o.price);
+    if (o.listing_type === 'sell' && o.price) g.sellPrices.push(o.price);
     if (new Date(o.timestamp) > new Date(g.lastTime)) g.lastTime = o.timestamp;
   }
 
@@ -535,10 +517,8 @@ function render() {
     let maxBuy = g.buyPrices.length ? Math.max(...g.buyPrices) : null;
     let minSell = g.sellPrices.length ? Math.min(...g.sellPrices) : null;
     let e = estimate(g.allPrices);
-    let isActive = selectedItemKey === g.name;
-
     return `
-      <tr class="clickable-row ${isActive ? 'active-row' : ''}" data-item="${esc(g.name)}" onclick="renderTrend('${esc(g.name)}')">
+      <tr class="clickable-row ${selectedItemKey === g.name ? 'active-row' : ''}" onclick="renderTrend('${esc(g.name)}')">
         <td><strong style="color:var(--accent)">${esc(g.name)}</strong></td>
         <td><small class="muted">${esc(g.category)}</small></td>
         <td class="price-buy">${money(maxBuy)}</td>
@@ -549,24 +529,13 @@ function render() {
         <td><button class="sm primary" onclick="event.stopPropagation(); renderTrend('${esc(g.name)}')">View Graph 📈</button></td>
       </tr>
     `;
-  }).join('') || '<tr><td colspan="8" class="muted">No items found matching the current search/filters. Load a CSV file above to populate data.</td></tr>';
+  }).join('') || '<tr><td colspan="8" class="muted">No items found. Click "Load Local CSV File" above.</td></tr>';
 }
 
 function renderHistory() {
   let search = ($('histSearch')?.value || '').toLowerCase();
-  let body = $('historyRows');
-  if (!body) return;
-
-  let filtered = observations.filter(o => {
-    if (!search) return true;
-    return (o.item && o.item.toLowerCase().includes(search)) ||
-           (o.author_name && o.author_name.toLowerCase().includes(search)) ||
-           (o.original_text && o.original_text.toLowerCase().includes(search));
-  });
-
-  let slice = filtered.slice(0, 300);
-
-  body.innerHTML = slice.map(o => `
+  let filtered = observations.filter(o => !search || o.item.toLowerCase().includes(search) || o.author_name.toLowerCase().includes(search));
+  $('historyRows').innerHTML = filtered.slice(0, 300).map(o => `
     <tr>
       <td><small class="muted">${esc(fmtTime(o.timestamp))}</small></td>
       <td><strong>${esc(o.item)}</strong></td>
@@ -575,156 +544,31 @@ function renderHistory() {
       <td class="price-buy">${money(o.buy_price)}</td>
       <td class="price-sell">${money(o.sell_price)}</td>
       <td>${o.quantity || 1}</td>
-      <td><small class="muted">@${esc(o.author_name || o.source_name || 'Discord')}</small></td>
+      <td><small class="muted">@${esc(o.author_name)}</small></td>
       <td><small class="muted">${esc(o.original_text || '—')}</small></td>
     </tr>
-  `).join('') || '<tr><td colspan="9" class="muted">No trade feed entries.</td></tr>';
+  `).join('');
 }
 
 function renderCatalogue() {
-  let body = $('itemRows');
-  if (!body) return;
-  body.innerHTML = items.map(i => `
-    <tr>
-      <td><strong>${esc(i.name)}</strong></td>
-      <td>${esc(i.category)}</td>
-      <td>${i.wiki_url && /^https:\/\//.test(i.wiki_url) ? `<a href="${esc(i.wiki_url)}" rel="noopener noreferrer" target="_blank">Wiki ↗</a>` : '—'}</td>
-      <td><small class="muted">${esc(i.verification_status || 'Verified')}</small></td>
-    </tr>
-  `).join('') || '<tr><td colspan="4" class="muted">No catalogued items yet. Load CSV or add items.</td></tr>';
-}
-
-// Local CSV File Upload Handler
-$('localCsvFile').onchange = e => {
-  let file = e.target.files?.[0];
-  if (!file) return;
-
-  $('csvStatus').textContent = `Loading ${file.name}...`;
-  let reader = new FileReader();
-  reader.onload = ev => {
-    parseCSVToObservations(ev.target.result);
-    $('csvStatus').textContent = `Loaded ${observations.length.toLocaleString()} trade records from ${file.name}`;
-    render();
-    renderHistory();
-    renderCatalogue();
-  };
-  reader.readAsText(file);
-};
-
-function parseCSVToObservations(text) {
-  let lines = text.split('\n');
-  if (lines.length < 2) return;
-
-  observations = [];
   let itemSet = new Map();
-
-  for (let i = 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-    let row = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
-    let cols = row.map(c => c ? c.trim().replace(/^"|"$/g, '') : '');
-
-    if (cols.length < 5) continue;
-
-    let item = cols[4] || cols[0] || 'Unspecified Item';
-    let category = cols[5] || cols[1] || 'Other';
-    let listingType = cols[6] || cols[4] || 'sell';
-    let buyPrice = cols[7] ? parseInt(cols[7], 10) : null;
-    let sellPrice = cols[8] ? parseInt(cols[8], 10) : null;
-    let price = cols[9] ? parseInt(cols[9], 10) : (buyPrice || sellPrice || null);
-    let qty = cols[10] ? parseInt(cols[10], 10) : 1;
-
-    observations.push({
-      message_id: cols[0],
-      timestamp: cols[1],
-      author_name: cols[2],
-      item: item,
-      category: category,
-      listing_type: listingType,
-      buy_price: isNaN(buyPrice) ? null : buyPrice,
-      sell_price: isNaN(sellPrice) ? null : sellPrice,
-      price: isNaN(price) ? null : price,
-      quantity: isNaN(qty) ? 1 : qty,
-      original_text: cols[11] || cols[7] || ''
-    });
-
-    if (!itemSet.has(item)) {
-      itemSet.set(item, { name: item, category: category, verification_status: 'Community CSV' });
-    }
-  }
-
-  items = [...itemSet.values()];
+  observations.forEach(o => { if (!itemSet.has(o.item)) itemSet.set(o.item, o.category); });
+  $('itemRows').innerHTML = [...itemSet.entries()].map(([name, cat]) => `
+    <tr><td><strong>${esc(name)}</strong></td><td>${esc(cat)}</td><td>—</td><td>Verified</td></tr>
+  `).join('');
 }
 
-// Bulk Import & Parsing Handlers
-$('bulkFile').onchange = e => {
-  let f = e.target.files?.[0];
-  if (!f) return;
-  let sizeMb = (f.size / (1024 * 1024)).toFixed(1);
-  $('parseStatus').textContent = `Loaded file: ${f.name} (${sizeMb} MB). Click "Parse & Deduplicate" to process.`;
-};
-
-$('parse').onclick = async () => {$('parse').disabled = true;
-  $('parseStatus').textContent = 'Reading input into memory and deduplicating…';
-
+// Bulk Parse Button
+$('parse').onclick = async () => {
   let fileInput = $('bulkFile');
   let rawContent = fileInput.files?.[0] ? await fileInput.files[0].text() : $('bulkText').value;
 
-  if (!rawContent.trim()) {
-    $('parseStatus').textContent = 'No file uploaded or text pasted.';$('parse').disabled = false;
-    return;
-  }
+  if (!rawContent.trim()) return alert('Please upload or paste CSV text first.');
 
-  // Deduplication lookup set based on active observations
-  let existingKeys = new Set(observations.map(o => `${(o.item||'').toLowerCase()}|${o.price||0}|${o.listing_type||''}|${(o.author_name||'').toLowerCase()}|${o.timestamp||''}`));
-
-  let lines = rawContent.split('\n');
-  staged = [];
-  reviewReport = [];
-  let newCount = 0, dupCount = 0;
-
-  for (let idx = 0; idx < lines.length; idx++) {
-    let line = lines[idx].trim();
-    if (!line || line.startsWith('message_id') || line.startsWith('Item')) continue;
-
-    let cols = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
-    cols = cols.map(c => c ? c.trim().replace(/^"|"$/g, '') : '');
-
-    let item = cols[4] || cols[0] || 'Unspecified Item';
-    let category = cols[5] || cols[1] || 'Other';
-    let listingType = cols[6] || cols[4] || 'sell';
-    let buyPrice = cols[7] ? parseInt(cols[7], 10) : null;
-    let sellPrice = cols[8] ? parseInt(cols[8], 10) : null;
-    let price = cols[9] ? parseInt(cols[9], 10) : (buyPrice || sellPrice || numeric(cols[3]) || null);
-    let qty = cols[10] ? parseInt(cols[10], 10) : 1;
-    let ts = cols[1] || new Date().toISOString();
-    let author = cols[2] || 'Imported User';
-
-    let key = `${item.toLowerCase()}|${price||0}|${listingType}|${author.toLowerCase()}|${ts}`;
-    let isDup = existingKeys.has(key);
-
-    let rowObj = {
-      selected: !isDup,
-      isDuplicate: isDup,
-      timestamp: ts,
-      item: item,
-      category: category,
-      listing_type: listingType,
-      buy_price: isNaN(buyPrice) ? null : buyPrice,
-      sell_price: isNaN(sellPrice) ? null : sellPrice,
-      price: isNaN(price) ? null : price,
-      quantity: isNaN(qty) ? 1 : qty,
-      author_name: author,
-      original_text: cols[11] || cols[7] || line
-    };
-
-    staged.push(rowObj);
-    if (isDup) dupCount++; else newCount++;
-  }
-
-  // Render Preview Table
+  staged = processCSVText(rawContent);
   $('preview').innerHTML = staged.slice(0, 500).map((row, i) => `
-    <tr style="${row.isDuplicate ? 'opacity:0.5;background:#181522' : ''}">
-      <td><input type="checkbox" class="staged-chk" data-idx="${i}" ${row.selected ? 'checked' : ''}></td>
+    <tr>
+      <td><input type="checkbox" checked></td>
       <td><small>${esc(fmtTime(row.timestamp))}</small></td>
       <td><strong>${esc(row.item)}</strong></td>
       <td><small class="muted">${esc(row.category)}</small></td>
@@ -732,225 +576,29 @@ $('parse').onclick = async () => {$('parse').disabled = true;
       <td class="${row.listing_type === 'buy' ? 'price-buy' : 'price-sell'}">${money(row.price)}</td>
       <td>${row.quantity}</td>
       <td><small class="muted">@${esc(row.author_name)}</small></td>
-      <td><span class="tag ${row.isDuplicate ? 'tag-dup' : 'tag-buy'}">${row.isDuplicate ? 'EXACT DUPLICATE' : 'NEW'}</span></td>
+      <td><span class="tag tag-buy">READY</span></td>
     </tr>
-  `).join('') + (staged.length > 500 ? '<tr><td colspan="9" class="muted">Showing first 500 staged rows. All checked entries will be imported.</td></tr>' : '');
+  `).join('');
 
-  // Attach Checkbox Handlers
-  document.querySelectorAll('.staged-chk').forEach(chk => {
-    chk.onchange = e => {
-      let idx = Number(e.target.dataset.idx);
-      if (staged[idx]) staged[idx].selected = e.target.checked;
-      updateCommitButtonState();
-    };
-  });
-
-  $('selectAll').onchange = e => {
-    let checked = e.target.checked;
-    staged.forEach(s => { if (!s.isDuplicate) s.selected = checked; });
-    document.querySelectorAll('.staged-chk').forEach((chk, i) => {
-      if (!staged[i].isDuplicate) chk.checked = checked;
-    });
-    updateCommitButtonState();
-  };
-
-  $('rejected').textContent = `Deduplication complete.\nTotal Rows Processed: ${staged.length.toLocaleString()}\nNew Rows Staged: ${newCount.toLocaleString()}\nDuplicates Ignored: ${dupCount.toLocaleString()}`;
-  $('parseStatus').textContent = `Parsed ${staged.length.toLocaleString()} rows (${newCount.toLocaleString()} new, ${dupCount.toLocaleString()} duplicate).`;
-
-  updateCommitButtonState();
-  $('parse').disabled = false;
+  $('parseStatus').textContent = `Parsed ${staged.length.toLocaleString()} valid trade listings!`;
+  $('commit').disabled = false;
 };
 
-function updateCommitButtonState() {
-  let count = staged.filter(s => s.selected).length;
-  let btn = $('commit');
-  btn.disabled = count === 0;
-  btn.textContent = `Import ${count.toLocaleString()} Selected Rows`;
-}
-
-// IMPORT COMMIT HANDLER
-$('commit').onclick = async () => {
-  let selected = staged.filter(s => s.selected);
-  if (!selected.length) return alert('No rows selected for import.');
-
-  if (!confirm(`Confirm import of ${selected.length.toLocaleString()} listings into live market observation dataset?`)) return;
-
-  $('commit').disabled = true;
-  $('parseStatus').textContent = `Importing ${selected.length.toLocaleString()} listings...`;
-
-  if (client && admin) {
-    // Cloud Supabase Import Logic
-    let count = 0;
-    try {
-      for (let row of selected) {
-        // Ensure item exists in catalogue
-        let { data: existingItems } = await client.from('items').select('id').eq('name', row.item);
-        let itemId;
-        if (existingItems && existingItems.length) {
-          itemId = existingItems[0].id;
-        } else {
-          let { data: newItem } = await client.from('items').insert({ name: row.item, category: row.category, verification_status: 'Imported' }).select('id').single();
-          itemId = newItem.id;
-        }
-
-        await client.from('price_observations').insert({
-          item_id: itemId,
-          price: row.price,
-          quantity: row.quantity,
-          listing_type: row.listing_type,
-          source_name: row.author_name,
-          raw_text: row.original_text,
-          observed_at: row.timestamp
-        });
-        count++;
-      }
-      notice(`Successfully committed ${count.toLocaleString()} entries to cloud database!`);
-      await load();
-    } catch (err) {
-      notice(`Import error: ${err.message}`, true);
-    }
-  } else {
-    // Local / In-Memory Mode Import Logic
-    for (let row of selected) {
-      observations.push({
-        timestamp: row.timestamp,
-        item: row.item,
-        category: row.category,
-        listing_type: row.listing_type,
-        buy_price: row.buy_price,
-        sell_price: row.sell_price,
-        price: row.price,
-        quantity: row.quantity,
-        author_name: row.author_name,
-        original_text: row.original_text
-      });
-    }
-
-    render();
-    renderHistory();
-    renderCatalogue();
-
-    $('parseStatus').textContent = `✅ Successfully imported ${selected.length.toLocaleString()} listings into memory! All trends, side-by-side pricing, and trade feeds updated.`;
-    staged = [];
-    $('preview').innerHTML = '<tr><td colspan="9" class="good">Import complete! All records merged into live market data.</td></tr>';
-  }
-};
-
-// Review Export JSON
-$('reviewExport').onclick = () => {
-  let blob = new Blob([JSON.stringify({ staged, reviewReport }, null, 2)], { type: 'application/json' });
-  let url = URL.createObjectURL(blob);
-  let a = document.createElement('a');
-  a.href = url;
-  a.download = 'pixel-lineage-import-review.json';
-  a.click();
-  URL.revokeObjectURL(url);
-};
-
-// Add Single Manual Observation
-$('addObs').onclick = () => {
-  let name = $('manualItem').value.trim();
-  let priceVal = numeric($('obsPrice').value);
-  if (!name || isNaN(priceVal)) return alert('Please provide a valid item name and numeric price.');
-
-  let newObs = {
-    timestamp: new Date().toISOString(),
-    item: name,
-    category: $('manualCat').value || 'Other',
-    listing_type: $('obsType').value,
-    price: priceVal,
-    quantity: 1,
-    author_name: $('source').value.trim() || 'Manual Entry',
-    original_text: $('raw').value.trim() || `${$('obsType').value.toUpperCase()} ${name} ${priceVal}`
-  };
-
-  observations.push(newObs);
+$('commit').onclick = () => {
+  observations = [...observations, ...staged];
   render();
   renderHistory();
-  alert(`Successfully added observation for ${name} (${money(priceVal)})!`);
+  renderCatalogue();
+  alert(`Successfully imported ${staged.length.toLocaleString()} rows into live tracker!`);
   page('market');
 };
 
-async function allRows(table, columns = '*') {
-  if (!client) return [];
-  let rows = [];
-  for (let from = 0; ; from += 1000) {
-    let req = client.from(table).select(columns).order('id').range(from, from + 999);
-    let {data, error} = await withTimeout(req, 6000, `Fetching ${table}`);
-    if (error) throw error;
-    if (data) rows.push(...data);
-    if (!data || data.length < 1000) break;
-  }
-  return rows;
-}
+$('search').oninput = render;
+$('catFilter').onchange = render;
+$('filter').onchange = render;
+$('manualCat').innerHTML = cats.map(c => `<option>${c}</option>`).join('');
 
-async function load() {
-  if (!client) return;
-  try {
-    notice('Loading live market observations from Supabase database...');
-    items = await allRows('items');
-    let dbObs = await allRows('price_observations');
-    if (dbObs && dbObs.length) {
-      let itemMap = new Map(items.map(i => [i.id, i]));
-      observations = dbObs.map(o => {
-        let it = itemMap.get(o.item_id);
-        return {
-          id: o.id,
-          item: it?.name || 'Item',
-          category: it?.category || 'Other',
-          listing_type: o.listing_type || 'sell',
-          price: Number(o.price) || null,
-          quantity: o.quantity || 1,
-          timestamp: o.observed_at || o.created_at,
-          author_name: o.source_name || 'Discord',
-          original_text: o.raw_text || ''
-        };
-      });
-    }
-    render();
-    renderCatalogue();
-    notice(`Connected · ${items.length} items catalogued · ${observations.length} observations loaded.`);
-  } catch (e) {
-    notice(`Supabase Live Connection Notice: ${e.message}. (You can load local CSV files directly using the button below).`, false);
-  }
-}
-
-async function init() {
-  $('search').oninput = render;
-  $('catFilter').onchange = render;
-  $('filter').onchange = render;
-  $('itemCat').innerHTML = cats.map(c => `<option>${c}</option>`).join('');
-  $('manualCat').innerHTML = cats.map(c => `<option>${c}</option>`).join('');
-
-  if (client) {
-    try {
-      let res = await withTimeout(client.auth.getUser(), 2000, 'Auth');
-      let user = res?.data?.user;
-      admin = user?.id === ADMIN;
-      $('identity').textContent = admin ? 'Admin Connected' : 'Public Viewer';
-      document.querySelectorAll('.admin').forEach(x => x.classList.toggle('hide', !admin));
-      $('loginBtn').classList.toggle('hide', !!user);$('logoutBtn').classList.toggle('hide', !user);
-    } catch (err) { admin = false; }
-    await load();
-  } else {
-    notice('Running in offline/local CSV mode. Load your CSV file below.', false);
-  }
-}
-
-$('loginBtn').onclick = () => page('auth');$('signIn').onclick = async () => {
-  if (!client) return notice('Supabase client not connected', true);
-  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});$('password').value = '';
-  if (error) return notice(error.message, true);
-  await init();
-  page('market');
-};
-$('logoutBtn').onclick = async () => {
-  if (client) await client.auth.signOut();
-  await init();
-  page('market');
-};
-
-init();
+$('notice').textContent = "Ready! Load your cleaned CSV file using the button below.";
 </script>
 </body>
 </html>
