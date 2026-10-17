@@ -374,8 +374,7 @@ function renderTrend(itemKey) {
   let groupObs = observations.filter(o => o.item.toLowerCase() === itemKey.toLowerCase())
     .sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
 
-  if (!groupObs.length) { $('trendPanel').classList.add('hide'); return; }
-  $('trendPanel').classList.remove('hide');
+  if (!groupObs.length) { $('trendPanel').classList.add('hide'); return; }$('trendPanel').classList.remove('hide');
 
   let sample = groupObs[0];
   $('trendItemTitle').textContent = `${sample.item} (${sample.category})`;
@@ -390,10 +389,8 @@ function renderTrend(itemKey) {
   let e = estimate(allPrices);
 
   $('cardBuy').textContent = money(maxBuy);
-  $('cardSell').textContent = money(minSell);
-  $('cardMed').textContent = money(e.median);
-  $('cardAvg').textContent = money(e.avg);
-  $('cardCount').textContent = `${groupObs.length} listings`;
+  $('cardSell').textContent = money(minSell);$('cardMed').textContent = money(e.median);
+  $('cardAvg').textContent = money(e.avg);$('cardCount').textContent = `${groupObs.length} listings`;
 
   let trendText = '🟢 Stable';
   if (allPrices.length >= 2) {
@@ -414,7 +411,6 @@ function renderTrend(itemKey) {
     </tr>
   `).join('');
 
-  // Draw chart
   let W = 600, H = 140, p = 20;
   if (allPrices.length < 2) {
     $('chartBox').innerHTML = '<p class="muted">Single observation point. Additional listings over time will render a timeline graph.</p>';
@@ -564,11 +560,35 @@ $('localCsvFile').onchange = e => {
   reader.readAsText(file);
 };
 
+function parseCSV(text) {
+  let rows = [], row = [], cur = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    let c = text[i], next = text[i+1];
+    if (c === '"') {
+      if (inQuotes && next === '"') { cur += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (c === ',' && !inQuotes) {
+      row.push(cur.trim()); cur = '';
+    } else if ((c === '\r' || c === '\n') && !inQuotes) {
+      if (c === '\r' && next === '\n') i++;
+      row.push(cur.trim());
+      if (row.some(x => x !== '')) rows.push(row);
+      row = []; cur = '';
+    } else {
+      cur += c;
+    }
+  }
+  if (cur || row.length) {
+    row.push(cur.trim());
+    if (row.some(x => x !== '')) rows.push(row);
+  }
+  return rows;
+}
+
 function parseCSVToObservations(text) {
   let lines = text.split('\n');
   if (lines.length < 2) return;
 
-  let headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
   observations = [];
   let itemSet = new Map();
 
@@ -608,6 +628,33 @@ function parseCSVToObservations(text) {
 
   items = [...itemSet.values()];
 }
+
+// Bulk Import Event Handlers
+$('bulkFile').onchange = e => {
+  let f = e.target.files?.[0];
+  if (!f) return;
+  loadedFile = f;
+  let sizeMb = (f.size / (1024 * 1024)).toFixed(1);
+  $('parseStatus').textContent = `Loaded file: ${f.name} (${sizeMb} MB). Click "Parse & Deduplicate" to process.`;
+};
+
+$('parse').onclick = async () => {$('parse').disabled = true;
+  $('parseStatus').textContent = 'Reading input into memory…';
+
+  let rawContent = loadedFile ? await loadedFile.text() : $('bulkText').value;
+  if (!rawContent.trim()) {
+    $('parseStatus').textContent = 'No file uploaded or text pasted.';$('parse').disabled = false;
+    return;
+  }
+
+  parseCSVToObservations(rawContent);
+  render();
+  renderHistory();
+  renderCatalogue();
+
+  $('parseStatus').textContent = `Successfully parsed & deduplicated ${observations.length.toLocaleString()} listings!`;
+  $('parse').disabled = false;
+};
 
 async function allRows(table, columns = '*') {
   if (!client) return [];
@@ -666,8 +713,7 @@ async function init() {
       admin = user?.id === ADMIN;
       $('identity').textContent = admin ? 'Admin Connected' : 'Public Viewer';
       document.querySelectorAll('.admin').forEach(x => x.classList.toggle('hide', !admin));
-      $('loginBtn').classList.toggle('hide', !!user);
-      $('logoutBtn').classList.toggle('hide', !user);
+      $('loginBtn').classList.toggle('hide', !!user);$('logoutBtn').classList.toggle('hide', !user);
     } catch (err) { admin = false; }
     await load();
   } else {
@@ -675,11 +721,9 @@ async function init() {
   }
 }
 
-$('loginBtn').onclick = () => page('auth');
-$('signIn').onclick = async () => {
+$('loginBtn').onclick = () => page('auth');$('signIn').onclick = async () => {
   if (!client) return notice('Supabase client not connected', true);
-  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});
-  $('password').value = '';
+  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});$('password').value = '';
   if (error) return notice(error.message, true);
   await init();
   page('market');
