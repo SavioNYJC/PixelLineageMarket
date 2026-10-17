@@ -3,124 +3,165 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pixel Lineage Market</title>
+<title>Pixel Lineage Market & Trade Tracker</title>
 <style>
-:root{font:15px system-ui;color:#eee;background:#111019}
+:root{font:15px system-ui, -apple-system, sans-serif;color:#eee;background:#111019;--accent:#c5a3ff;--buy:#4ade80;--sell:#f87171}
 *{box-sizing:border-box}
 body{margin:0}
-header,main{max-width:1180px;margin:auto;padding:22px}
-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-h1{margin:0;color:#c5a3ff}
+header,main{max-width:1280px;margin:auto;padding:22px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid #322b40;padding-bottom:16px}
+h1{margin:0;color:var(--accent);font-size:24px}
 nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
 button,input,select,textarea{font:inherit;border-radius:8px;padding:10px;border:1px solid #50465f;background:#272233;color:#fff}
-button{cursor:pointer}
+button{cursor:pointer;background:#7950c5;border:none;font-weight:bold}
 button.primary{background:#7950c5}
+button.secondary{background:#3b324a;border:1px solid #57466c}
 button:disabled{opacity:.5;cursor:not-allowed}
-button.sm{padding:4px 8px;font-size:13px}
+button.sm{padding:5px 10px;font-size:12px}
 input,select{max-width:100%;width:100%}
-textarea{width:100%;min-height:200px}
-label{display:block;color:#c8c0d5;margin:12px 0 5px}
+textarea{width:100%;min-height:160px}
+label{display:block;color:#c8c0d5;margin:12px 0 5px;font-size:13px;font-weight:600}
 .panel{background:#1c1928;border:1px solid #40364f;border-radius:12px;padding:20px;margin-bottom:16px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
-.stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
 .stat-card{background:#252033;border:1px solid #4a3e5e;border-radius:8px;padding:12px;text-align:center}
-.stat-card .val{font-size:18px;font-weight:bold;color:#c5a3ff;margin-top:4px}
+.stat-card .val{font-size:20px;font-weight:bold;color:var(--accent);margin-top:4px}
 .stat-card .lbl{font-size:12px;color:#aaa3b7}
 .hide{display:none!important}
-table{width:100%;border-collapse:collapse;min-width:720px}
-td,th{border-bottom:1px solid #393144;padding:10px;text-align:left;vertical-align:top}
-th{color:#c7a8fa}
+table{width:100%;border-collapse:collapse;min-width:760px}
+td,th{border-bottom:1px solid #393144;padding:10px 12px;text-align:left;vertical-align:middle}
+th{color:#c7a8fa;background:#252033;font-size:13px;text-transform:uppercase;letter-spacing:0.5px}
+tr:hover{background:#231d30}
 .scroll{overflow:auto}
 .muted{color:#aaa3b7}
-.good{color:#91e6af}
-.bad{color:#ff9a9a}
-.pill{border:1px solid #57466c;padding:5px 9px;border-radius:20px}
+.good{color:var(--buy);font-weight:bold}
+.bad{color:var(--sell);font-weight:bold}
+.price-buy{color:var(--buy);font-weight:bold}
+.price-sell{color:var(--sell);font-weight:bold}
+.pill{border:1px solid #57466c;padding:5px 11px;border-radius:20px;font-size:12px}
 a{color:#c9a9ff}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .row>*{flex:1}
 small{color:#aaa3b7}
 #notice{white-space:pre-wrap}
 details{margin:8px 0}
-summary{cursor:pointer}
+summary{cursor:pointer;color:var(--accent);font-weight:600}
 section{margin-top:16px}
 .chart-container{background:#15121e;border:1px solid #382e47;border-radius:8px;padding:16px;margin-top:12px}
 .svg-chart{width:100%;height:180px;overflow:visible}
+.tag{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:bold;text-transform:uppercase}
+.tag-buy{background:rgba(74,222,128,0.15);color:var(--buy)}
+.tag-sell{background:rgba(248,113,113,0.15);color:var(--sell)}
 </style>
 </head>
 <body>
 <header>
   <div>
-    <small>UNOFFICIAL COMMUNITY TRACKER</small>
+    <small style="color:#a39bb0;letter-spacing:1px;font-weight:bold">PIXEL LINEAGE MARKET TRACKER</small>
     <h1>✦ Pixel Lineage Market</h1>
-    <small>Cloud-backed · Chunked Large File Streaming · Zero Overlap Deduplication</small>
+    <small>Unified Live Market · Zero Overlap Deduplication · Side-by-Side Buy/Sell Pricing</small>
   </div>
-  <div>
-    <span id="identity" class="pill">Public viewer</span>
-    <button id="loginBtn">Admin login</button>
-    <button id="logoutBtn" class="hide">Sign out</button>
+  <div class="row" style="flex:initial;gap:8px">
+    <span id="identity" class="pill">Public Viewer</span>
+    <button id="loginBtn" class="sm secondary">Admin Login</button>
+    <button id="logoutBtn" class="sm secondary hide">Sign Out</button>
   </div>
 </header>
+
 <main>
   <div id="notice" class="panel muted">Checking Supabase server connection…</div>
+
   <nav>
-    <button data-page="market" class="primary">Market</button>
-    <button data-page="catalogue">Items</button>
-    <button data-page="history">Listings</button>
-    <button data-page="editor" class="admin hide">Add listing</button>
-    <button data-page="bulk" class="admin hide">Bulk import</button>
+    <button data-page="market" class="primary">Market Trends</button>
+    <button data-page="history">All Trade Listings</button>
+    <button data-page="catalogue">Item Catalogue</button>
+    <button data-page="editor" class="admin hide">Add Listing</button>
+    <button data-page="bulk" class="admin hide">Bulk Import / Discord Parser</button>
   </nav>
 
+  <!-- MARKET SECTION -->
   <section id="market">
     <div class="panel">
-      <h2>Market overview & Price Trends</h2>
-      <p class="muted">Prices are grouped by item and equipment roll. Real-time statistics include Min, Max, Median, Estimates, Timestamps, and Price Trend analysis.</p>
-      <div class="grid">
-        <div><label>Search</label><input id="search" placeholder="Tome, sigil, relic, fatebrand…"></div>
-        <div><label>Evidence</label>
+      <h2>Market Overview & Side-by-Side Pricing</h2>
+      <p class="muted">Live market aggregation with side-by-side Buy Offers & Sell Listings. Click "View Trend" on any item to view historical price charts and time-series history.</p>
+
+      <div class="grid" style="margin-bottom:16px">
+        <div>
+          <label>Search Item / Name</label>
+          <input id="search" placeholder="Search Tome of Archon, Fatebrand, Sigil...">
+        </div>
+        <div>
+          <label>Category Filter</label>
+          <select id="catFilter">
+            <option value="ALL">All Categories</option>
+            <option value="Tome">Tomes (Class Books)</option>
+            <option value="Sigil">Sigils</option>
+            <option value="Heartblood">Heartbloods</option>
+            <option value="Heirloom">Heirlooms</option>
+            <option value="Material">Materials & Items</option>
+            <option value="Key">Keys</option>
+            <option value="Equipment/Relic">Equipment & Relics</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label>Listing Direction</label>
           <select id="filter">
-            <option value="sold">Completed sales</option>
-            <option value="sell">Selling listings</option>
-            <option value="buy">Buying offers</option>
+            <option value="all">All Market Listings (Buy & Sell)</option>
+            <option value="sell">Selling Listings Only</option>
+            <option value="buy">Buying Offers Only</option>
           </select>
         </div>
       </div>
+
+      <div class="row" style="margin-bottom:16px">
+        <input type="file" id="localCsvFile" accept=".csv" style="display:none">
+        <button class="secondary" onclick="$('localCsvFile').click()">📁 Load Local CSV File</button>
+        <span id="csvStatus" class="muted" style="font-size:13px"></span>
+      </div>
+
       <div class="scroll">
         <table>
           <thead>
             <tr>
               <th>Item</th>
-              <th>Roll</th>
-              <th>Min / Max</th>
-              <th>Median</th>
-              <th>Avg Estimate</th>
+              <th>Category</th>
+              <th>Highest Buy Offer</th>
+              <th>Lowest Sell Listing</th>
+              <th>Avg Market Estimate</th>
               <th>Latest Timestamp</th>
-              <th>Acc / Total</th>
-              <th>Trend</th>
+              <th>Total Posts</th>
+              <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="marketRows"></tbody>
+          <tbody id="marketRows">
+            <tr><td colspan="8" class="muted">Loading market observations...</td></tr>
+          </tbody>
         </table>
       </div>
     </div>
 
+    <!-- TREND PANEL -->
     <div id="trendPanel" class="panel hide">
-      <h3>✦ Price Trend & History Details: <span id="trendItemTitle" style="color:#c5a3ff"></span></h3>
+      <h3>✦ Price History & Trend Details: <span id="trendItemTitle" style="color:var(--accent)"></span></h3>
       <div class="stat-cards">
-        <div class="stat-card"><div class="lbl">Average Price</div><div id="cardAvg" class="val">-</div></div>
+        <div class="stat-card"><div class="lbl">Highest Buy Offer</div><div id="cardBuy" class="val price-buy">-</div></div>
+        <div class="stat-card"><div class="lbl">Lowest Sell Listing</div><div id="cardSell" class="val price-sell">-</div></div>
         <div class="stat-card"><div class="lbl">Median Price</div><div id="cardMed" class="val">-</div></div>
-        <div class="stat-card"><div class="lbl">Min Price</div><div id="cardMin" class="val">-</div></div>
-        <div class="stat-card"><div class="lbl">Max Price</div><div id="cardMax" class="val">-</div></div>
-        <div class="stat-card"><div class="lbl">Observations</div><div id="cardCount" class="val">-</div></div>
-        <div class="stat-card"><div class="lbl">Trend</div><div id="cardTrend" class="val">-</div></div>
+        <div class="stat-card"><div class="lbl">Avg Estimate</div><div id="cardAvg" class="val">-</div></div>
+        <div class="stat-card"><div class="lbl">Total Observations</div><div id="cardCount" class="val">-</div></div>
+        <div class="stat-card"><div class="lbl">Price Trend</div><div id="cardTrend" class="val">-</div></div>
       </div>
+      
       <div class="chart-container">
-        <h4>Price History Timeline</h4>
+        <h4 style="margin:0 0 12px 0">Historical Price Timeline</h4>
         <div id="chartBox"></div>
       </div>
+
       <div class="scroll" style="margin-top:16px">
         <table>
           <thead>
-            <tr><th>Timestamp</th><th>Price</th><th>Type</th><th>Roll</th><th>Source</th></tr>
+            <tr><th>Timestamp</th><th>Direction</th><th>Price</th><th>Author / User</th><th>Original Text</th></tr>
           </thead>
           <tbody id="trendHistoryRows"></tbody>
         </table>
@@ -128,98 +169,127 @@ section{margin-top:16px}
     </div>
   </section>
 
-  <section id="catalogue" class="hide">
-    <div class="panel">
-      <h2>Item catalogue</h2>
-      <div class="scroll">
-        <table>
-          <thead><tr><th>Item</th><th>Category</th><th>Wiki</th><th>Verification</th></tr></thead>
-          <tbody id="itemRows"></tbody>
-        </table>
-      </div>
-    </div>
-    <div class="panel admin hide">
-      <h3>Add catalogue item</h3>
-      <div class="grid">
-        <div><label>Exact name</label><input id="itemName"></div>
-        <div><label>Category</label><select id="itemCat"></select></div>
-        <div><label>Wiki URL (optional)</label><input id="itemWiki"></div>
-      </div>
-      <button class="primary" id="addItem">Create item</button>
-    </div>
-  </section>
-
+  <!-- ALL TRADE LISTINGS SECTION -->
   <section id="history" class="hide">
     <div class="panel">
-      <h2>Recorded listings</h2>
-      <p class="muted">Source messages are private. Published structured observations with exact timestamp tracking.</p>
+      <h2>All Trade Listings Feed</h2>
+      <p class="muted">Individual trade listings timestamped directly from Discord trade channels.</p>
+      
+      <div class="grid" style="margin-bottom:16px">
+        <div>
+          <label>Filter Feed</label>
+          <input id="histSearch" placeholder="Filter by item or username..." oninput="renderHistory()">
+        </div>
+      </div>
+
       <div class="scroll">
         <table>
-          <thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Type</th><th>Exact roll</th><th>Timestamp</th><th>Source</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Item</th>
+              <th>Category</th>
+              <th>Direction</th>
+              <th>Buy Price</th>
+              <th>Sell Price</th>
+              <th>Quantity</th>
+              <th>Posted By</th>
+              <th>Original Post Snippet</th>
+            </tr>
+          </thead>
           <tbody id="historyRows"></tbody>
         </table>
       </div>
     </div>
   </section>
 
-  <section id="editor" class="hide">
+  <!-- ITEM CATALOGUE SECTION -->
+  <section id="catalogue" class="hide">
     <div class="panel">
-      <h2>Add market observation</h2>
-      <div class="grid">
-        <div><label>Item</label><select id="obsItem"></select></div>
-        <div><label>Price (k/m/b accepted)</label><input id="obsPrice" placeholder="125k"></div>
-        <div><label>Evidence</label>
-          <select id="obsType">
-            <option value="sell">Selling listing</option>
-            <option value="buy">Buying offer</option>
-            <option value="sold">Confirmed sale</option>
-          </select>
-        </div>
-        <div><label>Rarity</label><input id="rarity" placeholder="As shown in-game"></div>
-        <div><label>Enchantment</label><input id="enchant"></div>
-        <div><label>Upgrade level</label><input id="upgrade" type="number" min="0" value="0"></div>
-        <div><label>Source label (public; no usernames)</label><input id="source" placeholder="Trade channel"></div>
+      <h2>Item Catalogue</h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Item Name</th><th>Category</th><th>Wiki Link</th><th>Verification Status</th></tr></thead>
+          <tbody id="itemRows"></tbody>
+        </table>
       </div>
-      <label>Substats: one per line, e.g. Attack: 100</label>
-      <textarea id="stats" style="min-height:100px" placeholder="Attack: 100&#10;Defence: 20"></textarea>
-      <label>Original message (private to admin; optional)</label>
-      <textarea id="raw" style="min-height:80px"></textarea>
-      <button class="primary" id="addObs">Save to Supabase</button>
+    </div>
+
+    <div class="panel admin hide">
+      <h3>Add Catalogue Item</h3>
+      <div class="grid">
+        <div><label>Exact Name</label><input id="itemName"></div>
+        <div><label>Category</label><select id="itemCat"></select></div>
+        <div><label>Wiki URL (optional)</label><input id="itemWiki"></div>
+      </div>
+      <button class="primary" id="addItem" style="margin-top:12px">Create Item</button>
     </div>
   </section>
 
+  <!-- EDITOR SECTION -->
+  <section id="editor" class="hide">
+    <div class="panel">
+      <h2>Add Market Observation</h2>
+      <div class="grid">
+        <div><label>Item</label><select id="obsItem"></select></div>
+        <div><label>Price (15m, 800k, 12500000 accepted)</label><input id="obsPrice" placeholder="15m"></div>
+        <div><label>Direction</label>
+          <select id="obsType">
+            <option value="sell">Selling Listing</option>
+            <option value="buy">Buying Offer</option>
+          </select>
+        </div>
+        <div><label>Author / Source</label><input id="source" placeholder="Discord Username"></div>
+      </div>
+      <label>Original Message Text</label>
+      <textarea id="raw" style="min-height:80px" placeholder="BUYING FATEBRAND 15m"></textarea>
+      <button class="primary" id="addObs" style="margin-top:12px">Save Observation</button>
+    </div>
+  </section>
+
+  <!-- BULK IMPORT SECTION -->
   <section id="bulk" class="hide">
     <div class="panel">
-      <h2>Bulk import</h2>
-      <p class="muted">Supports standardized CSVs and large Discord exports (any file size). Large files are parsed asynchronously in chunks to prevent UI lockups.</p>
-      <label>Paste text or upload a .txt/.csv export</label>
+      <h2>Bulk Import & Discord Trade Message Parser</h2>
+      <p class="muted">Imports large Discord CSV exports or raw text logs. Zero-overlap deduplication filters out exact message duplicates while preserving distinct posts and timelines.</p>
+      
+      <label>Upload Export File (.csv, .txt, .log)</label>
       <input id="bulkFile" type="file" accept=".txt,.csv,.log,text/plain,text/csv">
-      <textarea id="bulkText" placeholder="Paste Discord messages or CSV data here."></textarea>
+      
+      <label>Or Paste Raw Messages / CSV Text</label>
+      <textarea id="bulkText" placeholder="Paste Discord chat export or CSV text here..."></textarea>
+
       <div class="row" style="margin-top:12px">
-        <button id="parse">Preview & Deduplicate</button>
-        <button class="primary" id="commit" disabled>Import selected</button>
+        <button id="parse" class="primary">Parse & Deduplicate</button>
+        <button class="secondary" id="commit" disabled>Import Selected to Database</button>
       </div>
-      <p id="parseStatus" style="font-weight:bold;color:#c5a3ff"></p>
+
+      <p id="parseStatus" style="font-weight:bold;color:var(--accent);margin-top:12px"></p>
+
       <div class="scroll">
         <table>
-          <thead><tr><th>Use</th><th>Item</th><th>Price</th><th>Qty</th><th>Type</th><th>Timestamp</th><th>Roll</th><th>Status</th></tr></thead>
+          <thead>
+            <tr><th>Import</th><th>Timestamp</th><th>Item</th><th>Category</th><th>Direction</th><th>Price</th><th>Qty</th><th>Posted By</th><th>Status</th></tr>
+          </thead>
           <tbody id="preview"></tbody>
         </table>
       </div>
+
       <details>
-        <summary>Needs review / ignored / duplicates log</summary>
-        <pre id="rejected" style="white-space:pre-wrap;max-height:400px;overflow:auto"></pre>
+        <summary>View Review & Rejection Log</summary>
+        <pre id="rejected" style="white-space:pre-wrap;max-height:300px;overflow:auto;background:#15121e;padding:12px;border-radius:6px;font-size:12px"></pre>
       </details>
-      <button id="reviewExport">Download review report</button>
+      <button id="reviewExport" class="sm secondary" style="margin-top:8px">Download Review Report (JSON)</button>
     </div>
   </section>
 
+  <!-- AUTH SECTION -->
   <section id="auth" class="hide">
-    <div class="panel">
-      <h2>Admin login</h2>
+    <div class="panel" style="max-width:400px;margin:auto">
+      <h2>Admin Login</h2>
       <label>Email</label><input id="email" type="email">
       <label>Password</label><input id="password" type="password">
-      <p><button class="primary" id="signIn">Sign in</button></p>
+      <button class="primary" id="signIn" style="width:100%;margin-top:16px">Sign In</button>
     </div>
   </section>
 </main>
@@ -247,47 +317,39 @@ if (window.supabase && typeof window.supabase.createClient === 'function') {
   } catch (err) {
     notice('Supabase init error: ' + err.message, true);
   }
-} else {
-  notice('Failed to load Supabase SDK from CDN. Check your internet connection or ad-blocker.', true);
 }
 
 function withTimeout(promise, ms = 6000, label = 'Request') {
   return new Promise((resolve, reject) => {
-    let timer = setTimeout(() => reject(new Error(`${label} timed out after 6s. Your Supabase project is likely PAUSED in the dashboard or blocked by an ad-blocker.`)), ms);
+    let timer = setTimeout(() => reject(new Error(`${label} timed out after 6s.`)), ms);
     promise.then(res => { clearTimeout(timer); resolve(res); }, err => { clearTimeout(timer); reject(err); });
   });
 }
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money = n => Number(n).toLocaleString('en-US', {maximumFractionDigits: 2});
-const cats = ['Tome','Sigil','Chestplate','Legs','Helmet','Weapon','Relic','Scroll','Material','Consumable','Other'];
+const money = n => (n === null || n === undefined || isNaN(n)) ? '—' : Number(n).toLocaleString('en-US', {maximumFractionDigits: 0}) + ' Gold';
+const cats = ['Tome','Sigil','Heartblood','Heirloom','Material','Key','Equipment/Relic','Scroll','Other'];
 
 let items = [], variants = [], observations = [], admin = false, staged = [], loadedFile = null, reviewReport = [];
 
 function page(p) {
   document.querySelectorAll('main>section').forEach(x => x.classList.toggle('hide', x.id !== p));
   document.querySelectorAll('[data-page]').forEach(b => b.classList.toggle('primary', b.dataset.page === p));
+  if (p === 'history') renderHistory();
+  if (p === 'catalogue') renderCatalogue();
 }
 document.querySelectorAll('[data-page]').forEach(b => b.onclick = () => page(b.dataset.page));
 
 function numeric(s) {
-  let m = String(s).replace(/[,$\s]/g, '').match(/^(\d+(?:\.\d+)?)([kmb])?$/i);
-  return m ? Number(m[1]) * ({k: 1e3, m: 1e6, b: 1e9}[m[2]?.toLowerCase()] || 1) : NaN;
-}
-
-function statsObj(s) {
-  let o = {};
-  for (let line of (s || '').split(/[\n;,]+/)) {
-    if (!line.trim()) continue;
-    let m = line.trim().match(/^([^:=]+)\s*[:=]\s*([+-]?\d+(?:\.\d+)?%?)$/);
-    if (!m) continue;
-    o[m[1].trim()] = m[2].endsWith('%') ? m[2] : Number(m[2]);
+  if (!s) return NaN;
+  let str = String(s).toLowerCase().replace(/[,$\s]/g, '');
+  let m = str.match(/^(\d+(?:\.\d+)?)([kmb])?$/);
+  if (m) {
+    let mult = {k: 1e3, m: 1e6, b: 1e9}[m[2]] || 1;
+    return Number(m[1]) * mult;
   }
-  return o;
-}
-
-function roll(v) {
-  return v ? [v.rarity, v.enchantment, v.upgrades ? '+' + v.upgrades : '', ...Object.entries(v.substats || {}).map(([k, x]) => k + ': ' + x)].filter(Boolean).join(' · ') || 'Unspecified roll' : 'Standard / unspecified';
+  let raw = str.match(/\b\d{4,}\b/);
+  return raw ? parseInt(raw[0], 10) : NaN;
 }
 
 function fmtTime(t) {
@@ -303,101 +365,248 @@ function med(a) {
 }
 
 function estimate(a) {
-  let m = med(a), mad = med(a.map(v => Math.abs(v - m))), sorted = [...a].sort((x, y) => x - y);
-  let q = p => {
-    let i = (sorted.length - 1) * p, l = Math.floor(i);
-    return sorted[l] + (sorted[Math.ceil(i)] - sorted[l]) * (i - l);
-  };
-  let iqr = a.length >= 4 ? q(.75) - q(.25) : 0;
-  let keep = a.filter(v => a.length < 5 || (mad > 0 ? .6745 * Math.abs(v - m) / mad <= 3.5 : (iqr > 0 ? v >= q(.25) - 1.5 * iqr && v <= q(.75) + 1.5 * iqr : v === m)));
-  return { avg: keep.reduce((s, v) => s + v, 0) / (keep.length || 1), median: med(keep), count: keep.length, total: a.length };
+  if (!a.length) return { avg: null, median: null, count: 0, total: 0 };
+  let m = med(a);
+  return { avg: a.reduce((s, v) => s + v, 0) / a.length, median: m, count: a.length, total: a.length };
 }
 
-function renderTrend(groupKey) {
-  let im = new Map(items.map(i => [i.id, i])), vm = new Map(variants.map(v => [v.id, v]));
-  let groupObs = observations.filter(o => {
-    let v = vm.get(o.variant_id);
-    let k = [o.item_id, o.listing_type, JSON.stringify(v ? {rarity: v.rarity, enchantment: v.enchantment, upgrades: v.upgrades, substats: v.substats} : null)].join('|');
-    return k === groupKey;
-  }).sort((a, b) => new Date(a.observed_at || 0) - new Date(b.observed_at || 0));
+function renderTrend(itemKey) {
+  let groupObs = observations.filter(o => o.item.toLowerCase() === itemKey.toLowerCase())
+    .sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
 
   if (!groupObs.length) { $('trendPanel').classList.add('hide'); return; }
   $('trendPanel').classList.remove('hide');
 
-  let firstObs = groupObs[0], item = im.get(firstObs.item_id), v = vm.get(firstObs.variant_id);
-  $('trendItemTitle').textContent = `${item?.name || 'Unknown'} (${firstObs.listing_type.toUpperCase()}) · ${roll(v)}`;
+  let sample = groupObs[0];
+  $('trendItemTitle').textContent = `${sample.item} (${sample.category})`;
 
-  let prices = groupObs.map(o => Number(o.price)), e = estimate(prices);
-  let minP = Math.min(...prices), maxP = Math.max(...prices);
+  let buyPrices = groupObs.filter(o => (o.listing_type === 'buy' || o.buy_price) && (o.buy_price || o.price)).map(o => o.buy_price || o.price);
+  let sellPrices = groupObs.filter(o => (o.listing_type === 'sell' || o.sell_price) && (o.sell_price || o.price)).map(o => o.sell_price || o.price);
+  let allPrices = groupObs.map(o => o.price || o.sell_price || o.buy_price).filter(Boolean);
 
-  $('cardAvg').textContent = money(e.avg);
+  let maxBuy = buyPrices.length ? Math.max(...buyPrices) : null;
+  let minSell = sellPrices.length ? Math.min(...sellPrices) : null;
+
+  let e = estimate(allPrices);
+
+  $('cardBuy').textContent = money(maxBuy);
+  $('cardSell').textContent = money(minSell);
   $('cardMed').textContent = money(e.median);
-  $('cardMin').textContent = money(minP);
-  $('cardMax').textContent = money(maxP);
-  $('cardCount').textContent = `${groupObs.length} obs`;
+  $('cardAvg').textContent = money(e.avg);
+  $('cardCount').textContent = `${groupObs.length} listings`;
 
   let trendText = '🟢 Stable';
-  if (groupObs.length >= 2) {
-    let firstP = Number(groupObs[0].price), lastP = Number(groupObs[groupObs.length - 1].price);
+  if (allPrices.length >= 2) {
+    let firstP = allPrices[0], lastP = allPrices[allPrices.length - 1];
     let pct = ((lastP - firstP) / firstP) * 100;
     if (pct > 2) trendText = `📈 +${pct.toFixed(1)}%`;
     else if (pct < -2) trendText = `📉 ${pct.toFixed(1)}%`;
   }
   $('cardTrend').textContent = trendText;
 
-  $('trendHistoryRows').innerHTML = groupObs.slice().reverse().map(o => 
-    `<tr><td>${esc(fmtTime(o.observed_at))}</td><td>${money(o.price)}</td><td>${esc(o.listing_type)}</td><td>${esc(roll(vm.get(o.variant_id)))}</td><td>${esc(o.source_name || 'Discord')}</td></tr>`
-  ).join('');
+  $('trendHistoryRows').innerHTML = groupObs.slice().reverse().map(o => `
+    <tr>
+      <td><small>${esc(fmtTime(o.timestamp))}</small></td>
+      <td><span class="tag ${o.listing_type === 'buy' ? 'tag-buy' : 'tag-sell'}">${esc(o.listing_type)}</span></td>
+      <td class="${o.listing_type === 'buy' ? 'price-buy' : 'price-sell'}">${money(o.price || o.buy_price || o.sell_price)}</td>
+      <td><small class="muted">@${esc(o.author_name || o.source_name || 'Discord')}</small></td>
+      <td><small>${esc(o.original_text || '—')}</small></td>
+    </tr>
+  `).join('');
 
+  // Draw chart
   let W = 600, H = 140, p = 20;
-  if (groupObs.length < 2) {
-    $('chartBox').innerHTML = '<p class="muted">Add more price points over time to render a trend chart.</p>';
+  if (allPrices.length < 2) {
+    $('chartBox').innerHTML = '<p class="muted">Single observation point. Additional listings over time will render a timeline graph.</p>';
     return;
   }
-  let minT = new Date(groupObs[0].observed_at || 0).getTime(), maxT = new Date(groupObs[groupObs.length - 1].observed_at || 0).getTime();
+  let minP = Math.min(...allPrices), maxP = Math.max(...allPrices), rangeP = (maxP - minP) || 1;
+  let minT = new Date(groupObs[0].timestamp || 0).getTime();
+  let maxT = new Date(groupObs[groupObs.length - 1].timestamp || 0).getTime();
   if (maxT === minT) maxT = minT + 1;
-  let rangeP = (maxP - minP) || 1;
+
   let points = groupObs.map(o => {
-    let t = new Date(o.observed_at || 0).getTime();
+    let price = o.price || o.sell_price || o.buy_price || 0;
+    let t = new Date(o.timestamp || 0).getTime();
     let x = p + ((t - minT) / (maxT - minT)) * (W - 2 * p);
-    let y = H - p - ((Number(o.price) - minP) / rangeP) * (H - 2 * p);
-    return { x, y, price: o.price, t: fmtTime(o.observed_at) };
+    let y = H - p - ((price - minP) / rangeP) * (H - 2 * p);
+    return { x, y, price, t: fmtTime(o.timestamp), type: o.listing_type };
   });
 
   let poly = points.map(pt => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
-  let dots = points.map(pt => `<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="#c5a3ff"><title>${pt.t}: ${money(pt.price)}</title></circle>`).join('');
+  let dots = points.map(pt => `<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="${pt.type === 'buy' ? '#4ade80' : '#c5a3ff'}"><title>${pt.t}: ${money(pt.price)}</title></circle>`).join('');
   $('chartBox').innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="svg-chart"><polyline fill="none" stroke="#7950c5" stroke-width="3" points="${poly}" />${dots}</svg>`;
 }
 
 function render() {
-  let im = new Map(items.map(i => [i.id, i])), vm = new Map(variants.map(v => [v.id, v]));
+  let search = $('search').value.toLowerCase();
+  let cat = $('catFilter').value;
+  let dir = $('filter').value;
 
-  $('itemRows').innerHTML = items.map(i => 
-    `<tr><td>${esc(i.name)}</td><td>${esc(i.category)}</td><td>${i.wiki_url && /^https:\/\//.test(i.wiki_url) ? `<a href="${esc(i.wiki_url)}" rel="noopener noreferrer" target="_blank">Wiki ↗</a>` : '—'}</td><td>${esc(i.verification_status)}</td></tr>`
-  ).join('');
+  let itemMap = new Map();
 
-  $('obsItem').innerHTML = items.map(i => `<option value="${i.id}">${esc(i.name)} (${esc(i.category)})</option>`).join('');
-
-  $('historyRows').innerHTML = observations.slice().reverse().map(o => 
-    `<tr><td>${esc(im.get(o.item_id)?.name || 'Unknown')}</td><td>${money(o.price)}</td><td>${o.quantity || 1}</td><td>${esc(o.listing_type)}</td><td>${esc(roll(vm.get(o.variant_id)))}</td><td>${esc(fmtTime(o.observed_at))}</td><td>${esc(o.source_name || 'Discord')}</td></tr>`
-  ).join('');
-
-  let groups = new Map();
   for (let o of observations) {
-    let v = vm.get(o.variant_id);
-    let k = [o.item_id, o.listing_type, JSON.stringify(v ? {rarity: v.rarity, enchantment: v.enchantment, upgrades: v.upgrades, substats: v.substats} : null)].join('|');
-    if (!groups.has(k)) groups.set(k, {key: k, item: im.get(o.item_id), v, type: o.listing_type, prices: [], obs: []});
-    groups.get(k).prices.push(Number(o.price));
-    groups.get(k).obs.push(o);
+    let itemName = o.item || 'Unknown Item';
+    let key = itemName.toLowerCase();
+
+    if (!itemMap.has(key)) {
+      itemMap.set(key, {
+        name: itemName,
+        category: o.category || 'Other',
+        buyPrices: [],
+        sellPrices: [],
+        allPrices: [],
+        lastTime: o.timestamp,
+        obsCount: 0
+      });
+    }
+
+    let g = itemMap.get(key);
+    g.obsCount++;
+
+    let p = o.price || o.buy_price || o.sell_price;
+    if (p) g.allPrices.push(p);
+
+    if (o.listing_type === 'buy' || o.buy_price) {
+      if (o.buy_price || o.price) g.buyPrices.push(o.buy_price || o.price);
+    }
+    if (o.listing_type === 'sell' || o.sell_price) {
+      if (o.sell_price || o.price) g.sellPrices.push(o.sell_price || o.price);
+    }
+
+    if (new Date(o.timestamp) > new Date(g.lastTime)) g.lastTime = o.timestamp;
   }
 
-  let search = $('search').value.toLowerCase(), type = $('filter').value;
-  $('marketRows').innerHTML = [...groups.values()].filter(g => g.type === type && g.item?.name.toLowerCase().includes(search)).map(g => {
-    let e = estimate(g.prices), minP = Math.min(...g.prices), maxP = Math.max(...g.prices);
-    let sortedObs = [...g.obs].sort((a, b) => new Date(b.observed_at || 0) - new Date(a.observed_at || 0));
-    let latestTime = fmtTime(sortedObs[0]?.observed_at);
-    return `<tr><td><b>${esc(g.item.name)}</b></td><td>${esc(roll(g.v))}</td><td>${money(minP)} / ${money(maxP)}</td><td>${money(e.median)}</td><td>${money(e.avg)}</td><td><small>${esc(latestTime)}</small></td><td>${e.count} / ${e.total}</td><td><button class="sm primary" onclick="renderTrend('${esc(g.key)}')">View Trend</button></td></tr>`;
-  }).join('') || '<tr><td colspan="8">No observations for this filter yet.</td></tr>';
+  let rows = [...itemMap.values()].filter(g => {
+    if (cat !== 'ALL' && g.category !== cat) return false;
+    if (dir === 'buy' && !g.buyPrices.length) return false;
+    if (dir === 'sell' && !g.sellPrices.length) return false;
+    if (search && !g.name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  $('marketRows').innerHTML = rows.map(g => {
+    let maxBuy = g.buyPrices.length ? Math.max(...g.buyPrices) : null;
+    let minSell = g.sellPrices.length ? Math.min(...g.sellPrices) : null;
+    let e = estimate(g.allPrices);
+
+    return `
+      <tr>
+        <td><strong>${esc(g.name)}</strong></td>
+        <td><small class="muted">${esc(g.category)}</small></td>
+        <td class="price-buy">${money(maxBuy)}</td>
+        <td class="price-sell">${money(minSell)}</td>
+        <td>${money(e.avg)}</td>
+        <td><small class="muted">${esc(fmtTime(g.lastTime))}</small></td>
+        <td>${g.obsCount}</td>
+        <td><button class="sm primary" onclick="renderTrend('${esc(g.name)}')">View Trend</button></td>
+      </tr>
+    `;
+  }).join('') || '<tr><td colspan="8" class="muted">No items found matching the current search/filters.</td></tr>';
+}
+
+function renderHistory() {
+  let search = ($('histSearch')?.value || '').toLowerCase();
+  let body = $('historyRows');
+  if (!body) return;
+
+  let filtered = observations.filter(o => {
+    if (!search) return true;
+    return (o.item && o.item.toLowerCase().includes(search)) ||
+           (o.author_name && o.author_name.toLowerCase().includes(search)) ||
+           (o.original_text && o.original_text.toLowerCase().includes(search));
+  });
+
+  let slice = filtered.slice(0, 300);
+
+  body.innerHTML = slice.map(o => `
+    <tr>
+      <td><small class="muted">${esc(fmtTime(o.timestamp))}</small></td>
+      <td><strong>${esc(o.item)}</strong></td>
+      <td><small>${esc(o.category)}</small></td>
+      <td><span class="tag ${o.listing_type === 'buy' ? 'tag-buy' : 'tag-sell'}">${esc(o.listing_type)}</span></td>
+      <td class="price-buy">${money(o.buy_price)}</td>
+      <td class="price-sell">${money(o.sell_price)}</td>
+      <td>${o.quantity || 1}</td>
+      <td><small class="muted">@${esc(o.author_name || o.source_name || 'Discord')}</small></td>
+      <td><small class="muted">${esc(o.original_text || '—')}</small></td>
+    </tr>
+  `).join('') || '<tr><td colspan="9" class="muted">No trade feed entries.</td></tr>';
+}
+
+function renderCatalogue() {
+  let body = $('itemRows');
+  if (!body) return;
+  body.innerHTML = items.map(i => `
+    <tr>
+      <td><strong>${esc(i.name)}</strong></td>
+      <td>${esc(i.category)}</td>
+      <td>${i.wiki_url && /^https:\/\//.test(i.wiki_url) ? `<a href="${esc(i.wiki_url)}" rel="noopener noreferrer" target="_blank">Wiki ↗</a>` : '—'}</td>
+      <td><small class="muted">${esc(i.verification_status || 'Verified')}</small></td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" class="muted">No catalogued items yet. Load CSV or add items.</td></tr>';
+}
+
+// Local CSV File Upload Handler
+$('localCsvFile').onchange = e => {
+  let file = e.target.files?.[0];
+  if (!file) return;
+
+  $('csvStatus').textContent = `Loading ${file.name}...`;
+  let reader = new FileReader();
+  reader.onload = ev => {
+    parseCSVToObservations(ev.target.result);
+    $('csvStatus').textContent = `Loaded ${observations.length.toLocaleString()} records from ${file.name}`;
+    render();
+    renderHistory();
+    renderCatalogue();
+  };
+  reader.readAsText(file);
+};
+
+function parseCSVToObservations(text) {
+  let lines = text.split('\n');
+  if (lines.length < 2) return;
+
+  let headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  observations = [];
+  let itemSet = new Map();
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    let row = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
+    let cols = row.map(c => c ? c.trim().replace(/^"|"$/g, '') : '');
+
+    if (cols.length < 5) continue;
+
+    let item = cols[4] || cols[0] || 'Unspecified Item';
+    let category = cols[5] || cols[1] || 'Other';
+    let listingType = cols[6] || cols[4] || 'sell';
+    let buyPrice = cols[7] ? parseInt(cols[7], 10) : null;
+    let sellPrice = cols[8] ? parseInt(cols[8], 10) : null;
+    let price = cols[9] ? parseInt(cols[9], 10) : (buyPrice || sellPrice || null);
+    let qty = cols[10] ? parseInt(cols[10], 10) : 1;
+
+    observations.push({
+      message_id: cols[0],
+      timestamp: cols[1],
+      author_name: cols[2],
+      item: item,
+      category: category,
+      listing_type: listingType,
+      buy_price: isNaN(buyPrice) ? null : buyPrice,
+      sell_price: isNaN(sellPrice) ? null : sellPrice,
+      price: isNaN(price) ? null : price,
+      quantity: isNaN(qty) ? 1 : qty,
+      original_text: cols[11] || cols[7] || ''
+    });
+
+    if (!itemSet.has(item)) {
+      itemSet.set(item, { name: item, category: category, verification_status: 'Community CSV' });
+    }
+  }
+
+  items = [...itemSet.values()];
 }
 
 async function allRows(table, columns = '*') {
@@ -416,385 +625,70 @@ async function allRows(table, columns = '*') {
 async function load() {
   if (!client) return;
   try {
-    notice('Loading market data from Supabase…');
+    notice('Loading live market observations from Supabase database...');
     items = await allRows('items');
-    variants = await allRows('equipment_variants');
-    
-    if (admin) {
-      observations = await allRows('price_observations', 'id,item_id,variant_id,price,quantity,listing_type,observed_at,source_name,confidence');
-    } else {
-      observations = [];
-      try {
-        observations = await allRows('price_observations', 'id,item_id,variant_id,price,quantity,listing_type,observed_at,source_name,confidence');
-      } catch (tableErr) {
-        for (let from = 0; ; from += 1000) {
-          let req = client.rpc('public_market_observations').range(from, from + 999);
-          let {data, error} = await withTimeout(req, 6000, 'Fetching market RPC');
-          if (error) throw error;
-          if (data) observations.push(...data);
-          if (!data || data.length < 1000) break;
-        }
-      }
+    let dbObs = await allRows('price_observations');
+    if (dbObs && dbObs.length) {
+      let itemMap = new Map(items.map(i => [i.id, i]));
+      observations = dbObs.map(o => {
+        let it = itemMap.get(o.item_id);
+        return {
+          id: o.id,
+          item: it?.name || 'Item',
+          category: it?.category || 'Other',
+          listing_type: o.listing_type || 'sell',
+          price: Number(o.price) || null,
+          quantity: o.quantity || 1,
+          timestamp: o.observed_at || o.created_at,
+          author_name: o.source_name || 'Discord',
+          original_text: o.raw_text || ''
+        };
+      });
     }
     render();
-    notice(`Connected · ${items.length} items · ${observations.length} observations${admin ? ' · Admin mode' : ' · Public view'}`);
+    renderCatalogue();
+    notice(`Connected · ${items.length} items catalogued · ${observations.length} observations loaded.`);
   } catch (e) {
-    let msg = e.message || String(e);
-    notice(`Connection Error: ${msg}\n\n→ Check app.supabase.com to ensure your project is ACTIVE (not paused) and API keys are correct.`, true);
+    notice(`Supabase Live Connection Notice: ${e.message}. (You can load local CSV files directly using the button below).`, false);
   }
 }
 
 async function init() {
-  if (!client) return;
+  $('search').oninput = render;
+  $('catFilter').onchange = render;
+  $('filter').onchange = render;
+  $('itemCat').innerHTML = cats.map(c => `<option>${c}</option>`).join('');
 
-  let dataLoadPromise = load();
-
-  try {
-    let authReq = client.auth.getUser();
-    let res = await withTimeout(authReq, 2500, 'Auth check');
-    let user = res?.data?.user;
-    admin = user?.id === ADMIN;
-
-    $('identity').textContent = admin ? 'Admin connected' : 'Public viewer';
-    document.querySelectorAll('.admin').forEach(x => x.classList.toggle('hide', !admin));
-    $('loginBtn').classList.toggle('hide', !!user);$('logoutBtn').classList.toggle('hide', !user);
-  } catch (err) {
-    admin = false;
-    $('identity').textContent = 'Public viewer';
+  if (client) {
+    try {
+      let res = await withTimeout(client.auth.getUser(), 2000, 'Auth');
+      let user = res?.data?.user;
+      admin = user?.id === ADMIN;
+      $('identity').textContent = admin ? 'Admin Connected' : 'Public Viewer';
+      document.querySelectorAll('.admin').forEach(x => x.classList.toggle('hide', !admin));
+      $('loginBtn').classList.toggle('hide', !!user);
+      $('logoutBtn').classList.toggle('hide', !user);
+    } catch (err) { admin = false; }
+    await load();
+  } else {
+    notice('Running in offline/local CSV mode. Load your CSV file below.', false);
   }
-
-  await dataLoadPromise;
 }
 
-$('loginBtn').onclick = () => page('auth');$('signIn').onclick = async () => {
+$('loginBtn').onclick = () => page('auth');
+$('signIn').onclick = async () => {
   if (!client) return notice('Supabase client not connected', true);
-  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});$('password').value = '';
+  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});
+  $('password').value = '';
   if (error) return notice(error.message, true);
   await init();
   page('market');
 };
 $('logoutBtn').onclick = async () => {
-  if (!client) return;
-  await client.auth.signOut();
+  if (client) await client.auth.signOut();
   await init();
   page('market');
 };
-
-$('search').oninput = render;
-$('filter').onchange = render;
-$('itemCat').innerHTML = cats.map(c => `<option>${c}</option>`).join('');
-
-async function ensureItem(name, category) {
-  let found = items.find(i => i.name.toLowerCase() === name.trim().toLowerCase() && i.category === category);
-  if (found) return found.id;
-  let {data, error} = await client.from('items').insert({name: name.trim(), category, verification_status: 'unverified'}).select('id').single();
-  if (error) throw error;
-  items.push({id: data.id, name: name.trim(), category, verification_status: 'unverified'});
-  return data.id;
-}
-
-async function saveObservation(o) {
-  let item_id = await ensureItem(o.name, o.category || 'Other'), variant_id = null;
-  if (['Chestplate','Legs','Helmet','Weapon','Relic'].includes(o.category)) {
-    let stats = statsObj(o.stats || '');
-    let variant = {item_id, rarity: o.rarity || null, enchantment: o.enchantment || null, upgrades: Number(o.upgrade) || 0, substats: stats};
-    let {data, error} = await client.from('equipment_variants').insert(variant).select('id').single();
-    if (error) throw error;
-    variant_id = data.id;
-  }
-  let row = {item_id, variant_id, price: o.price, quantity: o.quantity || 1, listing_type: o.status, source_name: o.source || null, raw_text: o.raw || null, confidence: 'unverified', observed_at: o.timestamp || o.observed_at || new Date().toISOString()};
-  let {error} = await client.from('price_observations').insert(row);
-  if (error) throw error;
-}
-
-async function guard(fn) {
-  if (!admin) return notice('Admin login required', true);
-  try { await fn(); await load(); } catch (e) { notice('Save failed: ' + e.message, true); }
-}
-
-$('addItem').onclick = () => guard(async () => {
-  let name = $('itemName').value.trim(), url =$('itemWiki').value.trim();
-  if (!name) throw Error('Item name required');
-  if (url && !/^https:\/\//.test(url)) throw Error('Use an HTTPS wiki URL');
-  let {error} = await client.from('items').insert({name, category: $('itemCat').value, wiki_url: url || null, verification_status: 'unverified'});
-  if (error) throw error;
-  $('itemName').value = '';
-});
-
-$('addObs').onclick = () => guard(async () => {
-  let i = items.find(x => x.id === Number($('obsItem').value)), p = numeric($('obsPrice').value);
-  if (!i || !Number.isFinite(p) || p <= 0) throw Error('Select an item and valid price');
-  await saveObservation({name: i.name, category: i.category, price: p, status: $('obsType').value, rarity: $('rarity').value, enchantment:$('enchant').value, upgrade: $('upgrade').value, stats:$('stats').value, source: $('source').value, raw:$('raw').value});
-  $('obsPrice').value = '';$('raw').value = '';
-});
-
-function parseCSV(text) {
-  let rows = [], row = [], cur = '', inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    let c = text[i], next = text[i+1];
-    if (c === '"') {
-      if (inQuotes && next === '"') { cur += '"'; i++; }
-      else inQuotes = !inQuotes;
-    } else if (c === ',' && !inQuotes) {
-      row.push(cur.trim()); cur = '';
-    } else if ((c === '\r' || c === '\n') && !inQuotes) {
-      if (c === '\r' && next === '\n') i++;
-      row.push(cur.trim());
-      if (row.some(x => x !== '')) rows.push(row);
-      row = []; cur = '';
-    } else {
-      cur += c;
-    }
-  }
-  if (cur || row.length) {
-    row.push(cur.trim());
-    if (row.some(x => x !== '')) rows.push(row);
-  }
-  return rows;
-}
-
-function status(s) {
-  return /^(sold|sale|completed)$/i.test(s) ? 'sold' : /^(buy|offer|wtb)$/i.test(s) ? 'buy' : 'sell';
-}
-
-function parseLine(line, headers, recordMeta) {
-  if (headers && !recordMeta?.isDiscord) {
-    let vals = Array.isArray(line) ? line : parseCSV(line)[0] || [], o = {};
-    headers.forEach((h, i) => o[h] = vals[i] || '');
-    let p = numeric(o.price);
-    if (!o.item || !Number.isFinite(p) || p <= 0) return null;
-    return {name: o.item, price: p, quantity: Number(o.quantity) || 1, status: status(o.status), category: o.category || items.find(i => i.name.toLowerCase() === o.item.toLowerCase())?.category || 'Other', rarity: o.rarity || '', enchantment: o.enchantment || '', upgrade: o.upgrade || '', stats: o.stats || '', source: o.source || recordMeta?.source || '', timestamp: o.timestamp || o.observed_at || recordMeta?.timestamp || '', raw: typeof line === 'string' ? line : line.join(',')};
-  }
-
-  let cleanStr = typeof line === 'string' ? line : String(line);
-  let clean = cleanStr.replace(/<@!?\d+>|<#\d+>/g, ' ').replace(/https?:\/\/\S+/g, ' ').replace(/\s+/g, ' ').trim();
-  if (!clean) return null;
-
-  let direction = /\b(WTB|LF|buying|looking for)\b/i.test(clean) ? 'buy' : /\b(sold|completed sale|sold for)\b/i.test(clean) ? 'sold' : 'sell';
-
-  let quantity = 1;
-  let qtyMatch = clean.match(/\b(?:(\d+)\s*x|x\s*(\d+)|qty\s*[:=]?\s*(\d+))\b/i);
-  if (qtyMatch) {
-    let qVal = qtyMatch[1] || qtyMatch[2] || qtyMatch[3];
-    if (qVal) quantity = parseInt(qVal, 10);
-  }
-  let cleanNoQty = clean.replace(/\b(?:\d+\s*x|x\s*\d+|qty\s*[:=]?\s*\d+)\b/gi, ' ');
-
-  let known = items.filter(i => new RegExp('(^|[^a-z0-9])' + i.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=$|[^a-z0-9])', 'i').test(cleanNoQty)).sort((a,b) => b.name.length - a.name.length);
-  let item = known[0];
-
-  let price = null;
-  let priceMatch = cleanNoQty.match(/\b(?:for|price|asking|offer(?:ing)?|paying|sold(?:\s+for)?)\s*[:=]?\s*(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb]?)\b/i);
-  if (priceMatch) {
-    let rawVal = priceMatch[1], val = numeric(rawVal);
-    if (val && (/[kmb]$/i.test(rawVal) || val >= 10000 || /[$₲]|gold|coins/i.test(clean))) {
-      price = val;
-    }
-  }
-
-  if (!price) {
-    let simple = cleanNoQty.match(/^(?:WTS|WTB|LF|selling|buying)?\s*(.*?)\s+[-–—:=|]\s*(?:for\s*)?(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb]?)\s*$/i);
-    if (simple) {
-      let rawP = simple[2], val = numeric(rawP);
-      if (val && (/[kmb]$/i.test(rawP) || val >= 10000)) {
-        price = val;
-      }
-    }
-  }
-
-  if (!price) {
-    let candidates = [...cleanNoQty.matchAll(/(?:^|[\s:=|])(?:[$₲]\s*)?(\d[\d,]*(?:\.\d+)?\s*[kmb])\b/gi)].map(x => numeric(x[1])).filter(v => v > 0);
-    if (candidates.length === 1) price = candidates[0];
-  }
-
-  let name = item?.name;
-  if (!name || !price || price <= 0) return null;
-
-  let tail = cleanNoQty.replace(new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '');
-  let enchant = tail.match(/\b(?:enchant(?:ment)?|ench)\s*[:=]\s*([a-z][\w -]*?)(?=\s*[|;,]|\s+(?:attack|defen[cs]e|hp|crit|price)\b|$)/i);
-  let rarity = tail.match(/\brarity\s*[:=]\s*(\w+)/i);
-  let upgrade = tail.match(/\b(?:upgrade|level)\s*[:=+]?\s*(\d+)\b/i);
-  let statMatches = [...tail.matchAll(/\b(attack|atk|defen[cs]e|def|hp|health|crit(?:ical)?(?: chance| damage)?|magic|speed)\s*[:=]\s*\+?(\d+(?:\.\d+)?%?)/gi)];
-  let stats = statMatches.map(m => m[1] + ': ' + m[2]).join('\n');
-
-  return {name, price, quantity, status: direction, category: item?.category || 'Other', rarity: rarity?.[1] || '', enchantment: enchant?.[1]?.trim() || '', upgrade: upgrade?.[1] || '', stats, source: recordMeta?.source || '', timestamp: recordMeta?.timestamp || '', raw: cleanStr};
-}
-
-$('bulkFile').onchange = e => {
-  let f = e.target.files?.[0];
-  if (!f) return;
-  loadedFile = f;
-  let sizeMb = (f.size / (1024 * 1024)).toFixed(1);
-  if (f.size > 5 * 1024 * 1024) {
-    $('bulkText').value = `[Loaded ${f.name} (${sizeMb} MB)]\nFile is large. Displaying raw text in text box skipped to prevent UI lag. Click "Preview & Deduplicate" below to stream-parse this file safely.`;
-  } else {
-    let reader = new FileReader();
-    reader.onload = ev => { $('bulkText').value = ev.target.result; };
-    reader.readAsText(f);
-  }
-  $('parseStatus').textContent = `Loaded file: ${f.name} (${sizeMb} MB). Ready to preview.`;
-};
-
-$('parse').onclick = async () => {$('parse').disabled = true;
-  $('parseStatus').textContent = 'Reading file content into memory…';
-
-  let rawContent = '';
-  if (loadedFile) {
-    rawContent = await loadedFile.text();
-  } else {
-    rawContent = $('bulkText').value;
-  }
-
-  if (!rawContent.trim()) {
-    $('parseStatus').textContent = 'No text or file content found to parse.';$('parse').disabled = false;
-    return;
-  }
-
-  $('parseStatus').textContent = 'Tokenizing CSV / Discord structure…';
-  await new Promise(r => setTimeout(r, 10));
-
-  let csvRows = parseCSV(rawContent);
-  if (!csvRows.length) {
-    $('parseStatus').textContent = 'Failed to find valid rows.';$('parse').disabled = false;
-    return;
-  }
-
-  let firstHeader = csvRows[0].map(s => s.toLowerCase().trim());
-  let isDiscordExport = firstHeader.includes('content') || firstHeader.includes('message') || firstHeader.includes('author name');
-  let isStandardCsv = firstHeader.includes('item') && firstHeader.includes('price');
-
-  staged = []; reviewReport = []; let ignored = 0, reviewed = 0, duplicates = 0;
-  let seenKeys = new Set();
-  let processedCount = 0;
-
-  if (isDiscordExport) {
-    let contentIdx = firstHeader.findIndex(h => h === 'content' || h === 'message');
-    let timeIdx = firstHeader.findIndex(h => h === 'timestamp' || h === 'created_at' || h === 'date');
-    let authorIdx = firstHeader.findIndex(h => h === 'author name' || h === 'author' || h === 'channel');
-
-    let rowsToProcess = csvRows.slice(1);
-    let chunkSize = 2000;
-
-    for (let i = 0; i < rowsToProcess.length; i += chunkSize) {
-      let chunk = rowsToProcess.slice(i, i + chunkSize);
-      
-      chunk.forEach((row, idx) => {
-        let text = row[contentIdx] || '';
-        let ts = row[timeIdx] || '';
-        let src = row[authorIdx] || 'Discord';
-        let lineNumber = i + idx + 2;
-
-        if (!text.trim()) return;
-
-        let subLines = text.split(/\r?\n/);
-        subLines.forEach(sub => {
-          if (!sub.trim()) return;
-          let o = parseLine(sub, null, {isDiscord: true, timestamp: ts, source: src});
-          if (!o) {
-            let hasPrice = /\b\d[\d,]*(?:\.\d+)?\s*[kmb]\b|\b(?:price|for|paying|offer)\s*[:=]?\s*\d/i.test(sub);
-            let hasItem = items.some(x => sub.toLowerCase().includes(x.name.toLowerCase()));
-            let classification = hasPrice || hasItem ? 'REVIEW' : 'IGNORED';
-            if (classification === 'REVIEW') reviewed++; else ignored++;
-            reviewReport.push({line: lineNumber, classification, text: sub});
-            return;
-          }
-
-          let dedupKey = [o.name.toLowerCase(), o.price, o.quantity, o.status, o.source, o.timestamp || ''].join('|');
-          let existsInDb = observations.some(obs => {
-            let itemName = items.find(it => it.id === obs.item_id)?.name || '';
-            return itemName.toLowerCase() === o.name.toLowerCase() && Number(obs.price) === o.price && obs.listing_type === o.status && (obs.observed_at === o.timestamp || obs.source_name === o.source);
-          });
-
-          if (seenKeys.has(dedupKey) || existsInDb) {
-            duplicates++;
-            staged.push({...o, selected: false, isDuplicate: true});
-            reviewReport.push({line: lineNumber, classification: 'DUPLICATE', text: sub});
-            return;
-          }
-          seenKeys.add(dedupKey);
-          staged.push({...o, selected: true, isDuplicate: false});
-        });
-      });
-
-      processedCount = Math.min(i + chunkSize, rowsToProcess.length);
-      let pct = Math.round((processedCount / rowsToProcess.length) * 100);
-      $('parseStatus').textContent = `Chunked parsing in progress: ${processedCount.toLocaleString()} / ${rowsToProcess.length.toLocaleString()} rows (${pct}%)…`;
-      await new Promise(r => setTimeout(r, 0));
-    }
-  } else {
-    let lines = rawContent.split(/\r?\n/), headers = isStandardCsv ? firstHeader : null;
-    let linesToProcess = lines.slice(headers ? 1 : 0);
-    let chunkSize = 3000;
-
-    for (let i = 0; i < linesToProcess.length; i += chunkSize) {
-      let chunk = linesToProcess.slice(i, i + chunkSize);
-
-      chunk.forEach((line, idx) => {
-        if (!line.trim()) return;
-        let o = parseLine(line, headers), lineNumber = i + idx + 1 + (headers ? 1 : 0);
-        if (!o) {
-          let hasPrice = /\b\d[\d,]*(?:\.\d+)?\s*[kmb]\b|\b(?:price|for|paying|offer)\s*[:=]?\s*\d/i.test(line);
-          let hasItem = items.some(x => line.toLowerCase().includes(x.name.toLowerCase()));
-          let classification = hasPrice || hasItem ? 'REVIEW' : 'IGNORED';
-          if (classification === 'REVIEW') reviewed++; else ignored++;
-          reviewReport.push({line: lineNumber, classification, text: line});
-          return;
-        }
-
-        let dedupKey = [o.name.toLowerCase(), o.price, o.quantity, o.status, o.source, o.timestamp || ''].join('|');
-        let existsInDb = observations.some(obs => {
-          let itemName = items.find(it => it.id === obs.item_id)?.name || '';
-          return itemName.toLowerCase() === o.name.toLowerCase() && Number(obs.price) === o.price && obs.listing_type === o.status && (obs.observed_at === o.timestamp || obs.source_name === o.source);
-        });
-
-        if (seenKeys.has(dedupKey) || existsInDb) {
-          duplicates++;
-          staged.push({...o, selected: false, isDuplicate: true});
-          reviewReport.push({line: lineNumber, classification: 'DUPLICATE', text: line});
-          return;
-        }
-        seenKeys.add(dedupKey);
-        staged.push({...o, selected: true, isDuplicate: false});
-      });
-
-      processedCount = Math.min(i + chunkSize, linesToProcess.length);
-      let pct = Math.round((processedCount / linesToProcess.length) * 100);
-      $('parseStatus').textContent = `Chunked parsing in progress: ${processedCount.toLocaleString()} / ${linesToProcess.length.toLocaleString()} lines (${pct}%)…`;
-      await new Promise(r => setTimeout(r, 0));
-    }
-  }
-
-  $('parseStatus').textContent = `Done! ${staged.filter(x => !x.isDuplicate).length.toLocaleString()} new parsed · ${duplicates.toLocaleString()} duplicates skipped · ${reviewed.toLocaleString()} need review · ${ignored.toLocaleString()} ignored.`;
-  $('rejected').textContent = reviewReport.slice(0, 1000).map(x => `${x.line} [${x.classification}] ${x.text}`).join('\n') + (reviewReport.length > 1000 ? '\n... (showing top 1,000 log entries)' : '');
-  
-  $('preview').innerHTML = staged.slice(0, 500).map((o, i) => 
-    `<tr style="${o.isDuplicate ? 'opacity:0.5' : ''}"><td><input type="checkbox" data-check="${i}" ${o.selected ? 'checked' : ''}></td><td>${esc(o.name)}</td><td>${money(o.price)}</td><td>${o.quantity || 1}</td><td>${esc(o.status)}</td><td><small>${esc(fmtTime(o.timestamp))}</small></td><td>${esc([o.rarity, o.enchantment, o.stats].filter(Boolean).join(' · '))}</td><td>${o.isDuplicate ? '<span class="bad">Duplicate</span>' : '<span class="good">New</span>'}</td></tr>`
-  ).join('') + (staged.length > 500 ? '<tr><td colspan="8">Showing first 500 staged rows. All selected entries will be committed.</td></tr>' : '');
-
-  document.querySelectorAll('[data-check]').forEach(x => x.onchange = () => staged[Number(x.dataset.check)].selected = x.checked);
-  $('commit').disabled = !staged.some(x => x.selected);$('parse').disabled = false;
-};
-
-$('reviewExport').onclick = () => {
-  let blob = new Blob([JSON.stringify({parsed: staged, review: reviewReport}, null, 2)], {type: 'application/json'}), u = URL.createObjectURL(blob), a = document.createElement('a');
-  a.href = u; a.download = 'pixel-lineage-import-review.json'; a.click(); URL.revokeObjectURL(u);
-};
-
-$('commit').onclick = () => guard(async () => {
-  let selected = staged.filter(o => o.selected);
-  if (!selected.length) throw Error('Select some rows');
-  if (!confirm(`Import ${selected.length} observations? This writes to the cloud.`)) return;
-  let count = 0;
-  for (let o of selected) {
-    try { await saveObservation(o); count++; }
-    catch (e) {
-      $('parseStatus').textContent = `Imported ${count}; stopped on row ${count + 1}: ${e.message}. Successfully imported rows are already saved. Do not retry the full batch.`;
-      throw e;
-    }
-  }
-  staged = []; $('commit').disabled = true;
-  $('parseStatus').textContent = `Imported ${count} observations successfully.`;
-});
 
 init();
 </script>
