@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pixel Lineage Market & Trade Tracker</title>
+<title>Pixel Lineage Market & Interactive Price Trends</title>
 <style>
 :root{font:15px system-ui, -apple-system, sans-serif;color:#eee;background:#111019;--accent:#c5a3ff;--buy:#4ade80;--sell:#f87171}
 *{box-sizing:border-box}
@@ -13,25 +13,28 @@ header{display:flex;justify-content:space-between;align-items:center;gap:12px;fl
 h1{margin:0;color:var(--accent);font-size:24px}
 nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
 button,input,select,textarea{font:inherit;border-radius:8px;padding:10px;border:1px solid #50465f;background:#272233;color:#fff}
-button{cursor:pointer;background:#7950c5;border:none;font-weight:bold}
+button{cursor:pointer;background:#7950c5;border:none;font-weight:bold;transition:all 0.2s}
+button:hover{background:#8e62e0}
 button.primary{background:#7950c5}
 button.secondary{background:#3b324a;border:1px solid #57466c}
 button:disabled{opacity:.5;cursor:not-allowed}
-button.sm{padding:5px 10px;font-size:12px}
+button.sm{padding:6px 12px;font-size:12px}
 input,select{max-width:100%;width:100%}
 textarea{width:100%;min-height:160px}
 label{display:block;color:#c8c0d5;margin:12px 0 5px;font-size:13px;font-weight:600}
 .panel{background:#1c1928;border:1px solid #40364f;border-radius:12px;padding:20px;margin-bottom:16px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
-.stat-card{background:#252033;border:1px solid #4a3e5e;border-radius:8px;padding:12px;text-align:center}
+.stat-card{background:#252033;border:1px solid #4a3e5e;border-radius:8px;padding:14px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.2)}
 .stat-card .val{font-size:20px;font-weight:bold;color:var(--accent);margin-top:4px}
 .stat-card .lbl{font-size:12px;color:#aaa3b7}
 .hide{display:none!important}
 table{width:100%;border-collapse:collapse;min-width:760px}
-td,th{border-bottom:1px solid #393144;padding:10px 12px;text-align:left;vertical-align:middle}
+td,th{border-bottom:1px solid #393144;padding:12px;text-align:left;vertical-align:middle}
 th{color:#c7a8fa;background:#252033;font-size:13px;text-transform:uppercase;letter-spacing:0.5px}
-tr:hover{background:#231d30}
+tr.clickable-row{cursor:pointer;transition:background 0.15s ease}
+tr.clickable-row:hover{background:#2e263d!important}
+tr.clickable-row.active-row{background:#382d4d!important;border-left:4px solid var(--accent)}
 .scroll{overflow:auto}
 .muted{color:#aaa3b7}
 .good{color:var(--buy);font-weight:bold}
@@ -47,11 +50,12 @@ small{color:#aaa3b7}
 details{margin:8px 0}
 summary{cursor:pointer;color:var(--accent);font-weight:600}
 section{margin-top:16px}
-.chart-container{background:#15121e;border:1px solid #382e47;border-radius:8px;padding:16px;margin-top:12px}
-.svg-chart{width:100%;height:180px;overflow:visible}
+.chart-container{background:#15121e;border:1px solid #382e47;border-radius:8px;padding:20px;margin-top:12px}
+.svg-chart{width:100%;height:220px;overflow:visible}
 .tag{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:bold;text-transform:uppercase}
 .tag-buy{background:rgba(74,222,128,0.15);color:var(--buy)}
 .tag-sell{background:rgba(248,113,113,0.15);color:var(--sell)}
+.tag-dup{background:rgba(255,255,255,0.1);color:#888}
 </style>
 </head>
 <body>
@@ -75,15 +79,15 @@ section{margin-top:16px}
     <button data-page="market" class="primary">Market Trends</button>
     <button data-page="history">All Trade Listings</button>
     <button data-page="catalogue">Item Catalogue</button>
-    <button data-page="editor" class="admin hide">Add Listing</button>
-    <button data-page="bulk" class="admin hide">Bulk Import / Discord Parser</button>
+    <button data-page="editor">Add Listing</button>
+    <button data-page="bulk">Bulk Import / Discord Parser</button>
   </nav>
 
   <!-- MARKET SECTION -->
   <section id="market">
     <div class="panel">
       <h2>Market Overview & Side-by-Side Pricing</h2>
-      <p class="muted">Live market aggregation with side-by-side Buy Offers & Sell Listings. Click "View Trend" on any item to view historical price charts and time-series history.</p>
+      <p class="muted">Click <b>any item row</b> in the table below to open its price history graph, price trends, and full listing breakdown.</p>
 
       <div class="grid" style="margin-bottom:16px">
         <div>
@@ -114,24 +118,24 @@ section{margin-top:16px}
         </div>
       </div>
 
-      <div class="row" style="margin-bottom:16px">
+      <div class="row" style="margin-bottom:16px;background:#252033;padding:12px;border-radius:8px;border:1px solid #4a3e5e">
         <input type="file" id="localCsvFile" accept=".csv" style="display:none">
         <button class="secondary" onclick="$('localCsvFile').click()">📁 Load Local CSV File</button>
-        <span id="csvStatus" class="muted" style="font-size:13px"></span>
+        <span id="csvStatus" class="muted" style="font-size:13px">Load <code>cleaned_pixel_lineage_trades_v2.csv</code> to populate all 220k+ live trades instantly.</span>
       </div>
 
       <div class="scroll">
         <table>
           <thead>
             <tr>
-              <th>Item</th>
+              <th>Item Name</th>
               <th>Category</th>
               <th>Highest Buy Offer</th>
               <th>Lowest Sell Listing</th>
               <th>Avg Market Estimate</th>
-              <th>Latest Timestamp</th>
-              <th>Total Posts</th>
-              <th>Actions</th>
+              <th>Latest Activity</th>
+              <th>Total Listings</th>
+              <th>Trend Graph</th>
             </tr>
           </thead>
           <tbody id="marketRows">
@@ -141,30 +145,40 @@ section{margin-top:16px}
       </div>
     </div>
 
-    <!-- TREND PANEL -->
-    <div id="trendPanel" class="panel hide">
-      <h3>✦ Price History & Trend Details: <span id="trendItemTitle" style="color:var(--accent)"></span></h3>
+    <!-- INTERACTIVE TREND GRAPH PANEL -->
+    <div id="trendPanel" class="panel hide" style="border:2px solid var(--accent)">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+        <h3 style="margin:0">✦ Price History & Trend Details: <span id="trendItemTitle" style="color:var(--accent)"></span></h3>
+        <button class="sm secondary" onclick="$('trendPanel').classList.add('hide')">✕ Close Graph</button>
+      </div>
+
       <div class="stat-cards">
         <div class="stat-card"><div class="lbl">Highest Buy Offer</div><div id="cardBuy" class="val price-buy">-</div></div>
         <div class="stat-card"><div class="lbl">Lowest Sell Listing</div><div id="cardSell" class="val price-sell">-</div></div>
-        <div class="stat-card"><div class="lbl">Median Price</div><div id="cardMed" class="val">-</div></div>
-        <div class="stat-card"><div class="lbl">Avg Estimate</div><div id="cardAvg" class="val">-</div></div>
+        <div class="stat-card"><div class="lbl">Median Market Price</div><div id="cardMed" class="val">-</div></div>
+        <div class="stat-card"><div class="lbl">Avg Price Estimate</div><div id="cardAvg" class="val">-</div></div>
         <div class="stat-card"><div class="lbl">Total Observations</div><div id="cardCount" class="val">-</div></div>
         <div class="stat-card"><div class="lbl">Price Trend</div><div id="cardTrend" class="val">-</div></div>
       </div>
       
       <div class="chart-container">
-        <h4 style="margin:0 0 12px 0">Historical Price Timeline</h4>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h4 style="margin:0;color:#c7a8fa">Historical Price Timeline (Green = Buy Offers, Purple = Sell Listings)</h4>
+          <span id="chartRangeInfo" class="muted" style="font-size:12px"></span>
+        </div>
         <div id="chartBox"></div>
       </div>
 
-      <div class="scroll" style="margin-top:16px">
-        <table>
-          <thead>
-            <tr><th>Timestamp</th><th>Direction</th><th>Price</th><th>Author / User</th><th>Original Text</th></tr>
-          </thead>
-          <tbody id="trendHistoryRows"></tbody>
-        </table>
+      <div style="margin-top:20px">
+        <h4 style="margin:0 0 10px 0;color:#c7a8fa">Individual Trade History Posts</h4>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Timestamp</th><th>Direction</th><th>Price</th><th>Author / User</th><th>Original Message Snippet</th></tr>
+            </thead>
+            <tbody id="trendHistoryRows"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </section>
@@ -229,9 +243,10 @@ section{margin-top:16px}
   <!-- EDITOR SECTION -->
   <section id="editor" class="hide">
     <div class="panel">
-      <h2>Add Market Observation</h2>
+      <h2>Add Single Market Observation</h2>
       <div class="grid">
-        <div><label>Item</label><select id="obsItem"></select></div>
+        <div><label>Item Name</label><input id="manualItem" placeholder="e.g. Tome of Archon"></div>
+        <div><label>Category</label><select id="manualCat"></select></div>
         <div><label>Price (15m, 800k, 12500000 accepted)</label><input id="obsPrice" placeholder="15m"></div>
         <div><label>Direction</label>
           <select id="obsType">
@@ -242,7 +257,7 @@ section{margin-top:16px}
         <div><label>Author / Source</label><input id="source" placeholder="Discord Username"></div>
       </div>
       <label>Original Message Text</label>
-      <textarea id="raw" style="min-height:80px" placeholder="BUYING FATEBRAND 15m"></textarea>
+      <textarea id="raw" style="min-height:80px" placeholder="WTS Tome of Archon 15m"></textarea>
       <button class="primary" id="addObs" style="margin-top:12px">Save Observation</button>
     </div>
   </section>
@@ -251,7 +266,7 @@ section{margin-top:16px}
   <section id="bulk" class="hide">
     <div class="panel">
       <h2>Bulk Import & Discord Trade Message Parser</h2>
-      <p class="muted">Imports large Discord CSV exports or raw text logs. Zero-overlap deduplication filters out exact message duplicates while preserving distinct posts and timelines.</p>
+      <p class="muted">Imports large Discord CSV exports or raw chat logs with zero-overlap deduplication against active observations.</p>
       
       <label>Upload Export File (.csv, .txt, .log)</label>
       <input id="bulkFile" type="file" accept=".txt,.csv,.log,text/plain,text/csv">
@@ -261,22 +276,34 @@ section{margin-top:16px}
 
       <div class="row" style="margin-top:12px">
         <button id="parse" class="primary">Parse & Deduplicate</button>
-        <button class="secondary" id="commit" disabled>Import Selected to Database</button>
+        <button class="secondary" id="commit" disabled>Import Selected Staged Rows</button>
       </div>
 
       <p id="parseStatus" style="font-weight:bold;color:var(--accent);margin-top:12px"></p>
 
-      <div class="scroll">
+      <div class="scroll" style="margin-top:16px">
         <table>
           <thead>
-            <tr><th>Import</th><th>Timestamp</th><th>Item</th><th>Category</th><th>Direction</th><th>Price</th><th>Qty</th><th>Posted By</th><th>Status</th></tr>
+            <tr>
+              <th><input type="checkbox" id="selectAll" checked></th>
+              <th>Timestamp</th>
+              <th>Item</th>
+              <th>Category</th>
+              <th>Direction</th>
+              <th>Price</th>
+              <th>Qty</th>
+              <th>Posted By</th>
+              <th>Status</th>
+            </tr>
           </thead>
-          <tbody id="preview"></tbody>
+          <tbody id="preview">
+            <tr><td colspan="9" class="muted">No rows staged. Upload or paste text above and click "Parse & Deduplicate".</td></tr>
+          </tbody>
         </table>
       </div>
 
-      <details>
-        <summary>View Review & Rejection Log</summary>
+      <details style="margin-top:16px">
+        <summary>View Review & Duplicate Log</summary>
         <pre id="rejected" style="white-space:pre-wrap;max-height:300px;overflow:auto;background:#15121e;padding:12px;border-radius:6px;font-size:12px"></pre>
       </details>
       <button id="reviewExport" class="sm secondary" style="margin-top:8px">Download Review Report (JSON)</button>
@@ -330,7 +357,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const money = n => (n === null || n === undefined || isNaN(n)) ? '—' : Number(n).toLocaleString('en-US', {maximumFractionDigits: 0}) + ' Gold';
 const cats = ['Tome','Sigil','Heartblood','Heirloom','Material','Key','Equipment/Relic','Scroll','Other'];
 
-let items = [], variants = [], observations = [], admin = false, staged = [], loadedFile = null, reviewReport = [];
+let items = [], observations = [], staged = [], reviewReport = [], admin = false, selectedItemKey = null;
 
 function page(p) {
   document.querySelectorAll('main>section').forEach(x => x.classList.toggle('hide', x.id !== p));
@@ -371,10 +398,18 @@ function estimate(a) {
 }
 
 function renderTrend(itemKey) {
+  selectedItemKey = itemKey;
+
+  document.querySelectorAll('.clickable-row').forEach(row => {
+    row.classList.toggle('active-row', row.dataset.item === itemKey);
+  });
+
   let groupObs = observations.filter(o => o.item.toLowerCase() === itemKey.toLowerCase())
     .sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
 
-  if (!groupObs.length) { $('trendPanel').classList.add('hide'); return; }$('trendPanel').classList.remove('hide');
+  if (!groupObs.length) { $('trendPanel').classList.add('hide'); return; }
+
+  $('trendPanel').classList.remove('hide');
 
   let sample = groupObs[0];
   $('trendItemTitle').textContent = `${sample.item} (${sample.category})`;
@@ -411,27 +446,42 @@ function renderTrend(itemKey) {
     </tr>
   `).join('');
 
-  let W = 600, H = 140, p = 20;
+  let W = 800, H = 180, p = 25;
   if (allPrices.length < 2) {
-    $('chartBox').innerHTML = '<p class="muted">Single observation point. Additional listings over time will render a timeline graph.</p>';
-    return;
+    $('chartBox').innerHTML = '<p class="muted" style="padding:20px;text-align:center">Single observation recorded. Multiple timestamped listings will project a price trajectory graph.</p>';
+  } else {
+    let minP = Math.min(...allPrices), maxP = Math.max(...allPrices), rangeP = (maxP - minP) || 1;
+    let minT = new Date(groupObs[0].timestamp || 0).getTime();
+    let maxT = new Date(groupObs[groupObs.length - 1].timestamp || 0).getTime();
+    if (maxT === minT) maxT = minT + 1;
+
+    let points = groupObs.map(o => {
+      let price = o.price || o.sell_price || o.buy_price || 0;
+      let t = new Date(o.timestamp || 0).getTime();
+      let x = p + ((t - minT) / (maxT - minT)) * (W - 2 * p);
+      let y = H - p - ((price - minP) / rangeP) * (H - 2 * p);
+      return { x, y, price, t: fmtTime(o.timestamp), type: o.listing_type, author: o.author_name || 'Discord' };
+    });
+
+    let poly = points.map(pt => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
+    let dots = points.map(pt => `
+      <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5" fill="${pt.type === 'buy' ? '#4ade80' : '#c5a3ff'}" stroke="#111019" stroke-width="1.5">
+        <title>${pt.t} | @${esc(pt.author)}: ${money(pt.price)} (${pt.type.toUpperCase()})</title>
+      </circle>
+    `).join('');
+
+    $('chartBox').innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}" class="svg-chart">
+        <line x1="${p}" y1="${p}" x2="${W-p}" y2="${p}" stroke="#322b40" stroke-dasharray="4" />
+        <line x1="${p}" y1="${H-p}" x2="${W-p}" y2="${H-p}" stroke="#322b40" stroke-dasharray="4" />
+        <polyline fill="none" stroke="#7950c5" stroke-width="3" points="${poly}" />
+        ${dots}
+      </svg>
+    `;
+    $('chartRangeInfo').textContent = `${fmtTime(groupObs[0].timestamp)} → ${fmtTime(groupObs[groupObs.length - 1].timestamp)}`;
   }
-  let minP = Math.min(...allPrices), maxP = Math.max(...allPrices), rangeP = (maxP - minP) || 1;
-  let minT = new Date(groupObs[0].timestamp || 0).getTime();
-  let maxT = new Date(groupObs[groupObs.length - 1].timestamp || 0).getTime();
-  if (maxT === minT) maxT = minT + 1;
 
-  let points = groupObs.map(o => {
-    let price = o.price || o.sell_price || o.buy_price || 0;
-    let t = new Date(o.timestamp || 0).getTime();
-    let x = p + ((t - minT) / (maxT - minT)) * (W - 2 * p);
-    let y = H - p - ((price - minP) / rangeP) * (H - 2 * p);
-    return { x, y, price, t: fmtTime(o.timestamp), type: o.listing_type };
-  });
-
-  let poly = points.map(pt => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
-  let dots = points.map(pt => `<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="${pt.type === 'buy' ? '#4ade80' : '#c5a3ff'}"><title>${pt.t}: ${money(pt.price)}</title></circle>`).join('');
-  $('chartBox').innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="svg-chart"><polyline fill="none" stroke="#7950c5" stroke-width="3" points="${poly}" />${dots}</svg>`;
+  $('trendPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function render() {
@@ -485,20 +535,21 @@ function render() {
     let maxBuy = g.buyPrices.length ? Math.max(...g.buyPrices) : null;
     let minSell = g.sellPrices.length ? Math.min(...g.sellPrices) : null;
     let e = estimate(g.allPrices);
+    let isActive = selectedItemKey === g.name;
 
     return `
-      <tr>
-        <td><strong>${esc(g.name)}</strong></td>
+      <tr class="clickable-row ${isActive ? 'active-row' : ''}" data-item="${esc(g.name)}" onclick="renderTrend('${esc(g.name)}')">
+        <td><strong style="color:var(--accent)">${esc(g.name)}</strong></td>
         <td><small class="muted">${esc(g.category)}</small></td>
         <td class="price-buy">${money(maxBuy)}</td>
         <td class="price-sell">${money(minSell)}</td>
         <td>${money(e.avg)}</td>
         <td><small class="muted">${esc(fmtTime(g.lastTime))}</small></td>
-        <td>${g.obsCount}</td>
-        <td><button class="sm primary" onclick="renderTrend('${esc(g.name)}')">View Trend</button></td>
+        <td><b>${g.obsCount}</b></td>
+        <td><button class="sm primary" onclick="event.stopPropagation(); renderTrend('${esc(g.name)}')">View Graph 📈</button></td>
       </tr>
     `;
-  }).join('') || '<tr><td colspan="8" class="muted">No items found matching the current search/filters.</td></tr>';
+  }).join('') || '<tr><td colspan="8" class="muted">No items found matching the current search/filters. Load a CSV file above to populate data.</td></tr>';
 }
 
 function renderHistory() {
@@ -552,38 +603,13 @@ $('localCsvFile').onchange = e => {
   let reader = new FileReader();
   reader.onload = ev => {
     parseCSVToObservations(ev.target.result);
-    $('csvStatus').textContent = `Loaded ${observations.length.toLocaleString()} records from ${file.name}`;
+    $('csvStatus').textContent = `Loaded ${observations.length.toLocaleString()} trade records from ${file.name}`;
     render();
     renderHistory();
     renderCatalogue();
   };
   reader.readAsText(file);
 };
-
-function parseCSV(text) {
-  let rows = [], row = [], cur = '', inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    let c = text[i], next = text[i+1];
-    if (c === '"') {
-      if (inQuotes && next === '"') { cur += '"'; i++; }
-      else inQuotes = !inQuotes;
-    } else if (c === ',' && !inQuotes) {
-      row.push(cur.trim()); cur = '';
-    } else if ((c === '\r' || c === '\n') && !inQuotes) {
-      if (c === '\r' && next === '\n') i++;
-      row.push(cur.trim());
-      if (row.some(x => x !== '')) rows.push(row);
-      row = []; cur = '';
-    } else {
-      cur += c;
-    }
-  }
-  if (cur || row.length) {
-    row.push(cur.trim());
-    if (row.some(x => x !== '')) rows.push(row);
-  }
-  return rows;
-}
 
 function parseCSVToObservations(text) {
   let lines = text.split('\n');
@@ -629,31 +655,220 @@ function parseCSVToObservations(text) {
   items = [...itemSet.values()];
 }
 
-// Bulk Import Event Handlers
+// Bulk Import & Parsing Handlers
 $('bulkFile').onchange = e => {
   let f = e.target.files?.[0];
   if (!f) return;
-  loadedFile = f;
   let sizeMb = (f.size / (1024 * 1024)).toFixed(1);
   $('parseStatus').textContent = `Loaded file: ${f.name} (${sizeMb} MB). Click "Parse & Deduplicate" to process.`;
 };
 
 $('parse').onclick = async () => {$('parse').disabled = true;
-  $('parseStatus').textContent = 'Reading input into memory…';
+  $('parseStatus').textContent = 'Reading input into memory and deduplicating…';
 
-  let rawContent = loadedFile ? await loadedFile.text() : $('bulkText').value;
+  let fileInput = $('bulkFile');
+  let rawContent = fileInput.files?.[0] ? await fileInput.files[0].text() : $('bulkText').value;
+
   if (!rawContent.trim()) {
     $('parseStatus').textContent = 'No file uploaded or text pasted.';$('parse').disabled = false;
     return;
   }
 
-  parseCSVToObservations(rawContent);
+  // Deduplication lookup set based on active observations
+  let existingKeys = new Set(observations.map(o => `${(o.item||'').toLowerCase()}|${o.price||0}|${o.listing_type||''}|${(o.author_name||'').toLowerCase()}|${o.timestamp||''}`));
+
+  let lines = rawContent.split('\n');
+  staged = [];
+  reviewReport = [];
+  let newCount = 0, dupCount = 0;
+
+  for (let idx = 0; idx < lines.length; idx++) {
+    let line = lines[idx].trim();
+    if (!line || line.startsWith('message_id') || line.startsWith('Item')) continue;
+
+    let cols = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
+    cols = cols.map(c => c ? c.trim().replace(/^"|"$/g, '') : '');
+
+    let item = cols[4] || cols[0] || 'Unspecified Item';
+    let category = cols[5] || cols[1] || 'Other';
+    let listingType = cols[6] || cols[4] || 'sell';
+    let buyPrice = cols[7] ? parseInt(cols[7], 10) : null;
+    let sellPrice = cols[8] ? parseInt(cols[8], 10) : null;
+    let price = cols[9] ? parseInt(cols[9], 10) : (buyPrice || sellPrice || numeric(cols[3]) || null);
+    let qty = cols[10] ? parseInt(cols[10], 10) : 1;
+    let ts = cols[1] || new Date().toISOString();
+    let author = cols[2] || 'Imported User';
+
+    let key = `${item.toLowerCase()}|${price||0}|${listingType}|${author.toLowerCase()}|${ts}`;
+    let isDup = existingKeys.has(key);
+
+    let rowObj = {
+      selected: !isDup,
+      isDuplicate: isDup,
+      timestamp: ts,
+      item: item,
+      category: category,
+      listing_type: listingType,
+      buy_price: isNaN(buyPrice) ? null : buyPrice,
+      sell_price: isNaN(sellPrice) ? null : sellPrice,
+      price: isNaN(price) ? null : price,
+      quantity: isNaN(qty) ? 1 : qty,
+      author_name: author,
+      original_text: cols[11] || cols[7] || line
+    };
+
+    staged.push(rowObj);
+    if (isDup) dupCount++; else newCount++;
+  }
+
+  // Render Preview Table
+  $('preview').innerHTML = staged.slice(0, 500).map((row, i) => `
+    <tr style="${row.isDuplicate ? 'opacity:0.5;background:#181522' : ''}">
+      <td><input type="checkbox" class="staged-chk" data-idx="${i}" ${row.selected ? 'checked' : ''}></td>
+      <td><small>${esc(fmtTime(row.timestamp))}</small></td>
+      <td><strong>${esc(row.item)}</strong></td>
+      <td><small class="muted">${esc(row.category)}</small></td>
+      <td><span class="tag ${row.listing_type === 'buy' ? 'tag-buy' : 'tag-sell'}">${esc(row.listing_type)}</span></td>
+      <td class="${row.listing_type === 'buy' ? 'price-buy' : 'price-sell'}">${money(row.price)}</td>
+      <td>${row.quantity}</td>
+      <td><small class="muted">@${esc(row.author_name)}</small></td>
+      <td><span class="tag ${row.isDuplicate ? 'tag-dup' : 'tag-buy'}">${row.isDuplicate ? 'EXACT DUPLICATE' : 'NEW'}</span></td>
+    </tr>
+  `).join('') + (staged.length > 500 ? '<tr><td colspan="9" class="muted">Showing first 500 staged rows. All checked entries will be imported.</td></tr>' : '');
+
+  // Attach Checkbox Handlers
+  document.querySelectorAll('.staged-chk').forEach(chk => {
+    chk.onchange = e => {
+      let idx = Number(e.target.dataset.idx);
+      if (staged[idx]) staged[idx].selected = e.target.checked;
+      updateCommitButtonState();
+    };
+  });
+
+  $('selectAll').onchange = e => {
+    let checked = e.target.checked;
+    staged.forEach(s => { if (!s.isDuplicate) s.selected = checked; });
+    document.querySelectorAll('.staged-chk').forEach((chk, i) => {
+      if (!staged[i].isDuplicate) chk.checked = checked;
+    });
+    updateCommitButtonState();
+  };
+
+  $('rejected').textContent = `Deduplication complete.\nTotal Rows Processed: ${staged.length.toLocaleString()}\nNew Rows Staged: ${newCount.toLocaleString()}\nDuplicates Ignored: ${dupCount.toLocaleString()}`;
+  $('parseStatus').textContent = `Parsed ${staged.length.toLocaleString()} rows (${newCount.toLocaleString()} new, ${dupCount.toLocaleString()} duplicate).`;
+
+  updateCommitButtonState();
+  $('parse').disabled = false;
+};
+
+function updateCommitButtonState() {
+  let count = staged.filter(s => s.selected).length;
+  let btn = $('commit');
+  btn.disabled = count === 0;
+  btn.textContent = `Import ${count.toLocaleString()} Selected Rows`;
+}
+
+// IMPORT COMMIT HANDLER
+$('commit').onclick = async () => {
+  let selected = staged.filter(s => s.selected);
+  if (!selected.length) return alert('No rows selected for import.');
+
+  if (!confirm(`Confirm import of ${selected.length.toLocaleString()} listings into live market observation dataset?`)) return;
+
+  $('commit').disabled = true;
+  $('parseStatus').textContent = `Importing ${selected.length.toLocaleString()} listings...`;
+
+  if (client && admin) {
+    // Cloud Supabase Import Logic
+    let count = 0;
+    try {
+      for (let row of selected) {
+        // Ensure item exists in catalogue
+        let { data: existingItems } = await client.from('items').select('id').eq('name', row.item);
+        let itemId;
+        if (existingItems && existingItems.length) {
+          itemId = existingItems[0].id;
+        } else {
+          let { data: newItem } = await client.from('items').insert({ name: row.item, category: row.category, verification_status: 'Imported' }).select('id').single();
+          itemId = newItem.id;
+        }
+
+        await client.from('price_observations').insert({
+          item_id: itemId,
+          price: row.price,
+          quantity: row.quantity,
+          listing_type: row.listing_type,
+          source_name: row.author_name,
+          raw_text: row.original_text,
+          observed_at: row.timestamp
+        });
+        count++;
+      }
+      notice(`Successfully committed ${count.toLocaleString()} entries to cloud database!`);
+      await load();
+    } catch (err) {
+      notice(`Import error: ${err.message}`, true);
+    }
+  } else {
+    // Local / In-Memory Mode Import Logic
+    for (let row of selected) {
+      observations.push({
+        timestamp: row.timestamp,
+        item: row.item,
+        category: row.category,
+        listing_type: row.listing_type,
+        buy_price: row.buy_price,
+        sell_price: row.sell_price,
+        price: row.price,
+        quantity: row.quantity,
+        author_name: row.author_name,
+        original_text: row.original_text
+      });
+    }
+
+    render();
+    renderHistory();
+    renderCatalogue();
+
+    $('parseStatus').textContent = `✅ Successfully imported ${selected.length.toLocaleString()} listings into memory! All trends, side-by-side pricing, and trade feeds updated.`;
+    staged = [];
+    $('preview').innerHTML = '<tr><td colspan="9" class="good">Import complete! All records merged into live market data.</td></tr>';
+  }
+};
+
+// Review Export JSON
+$('reviewExport').onclick = () => {
+  let blob = new Blob([JSON.stringify({ staged, reviewReport }, null, 2)], { type: 'application/json' });
+  let url = URL.createObjectURL(blob);
+  let a = document.createElement('a');
+  a.href = url;
+  a.download = 'pixel-lineage-import-review.json';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// Add Single Manual Observation
+$('addObs').onclick = () => {
+  let name = $('manualItem').value.trim();
+  let priceVal = numeric($('obsPrice').value);
+  if (!name || isNaN(priceVal)) return alert('Please provide a valid item name and numeric price.');
+
+  let newObs = {
+    timestamp: new Date().toISOString(),
+    item: name,
+    category: $('manualCat').value || 'Other',
+    listing_type: $('obsType').value,
+    price: priceVal,
+    quantity: 1,
+    author_name: $('source').value.trim() || 'Manual Entry',
+    original_text: $('raw').value.trim() || `${$('obsType').value.toUpperCase()} ${name} ${priceVal}`
+  };
+
+  observations.push(newObs);
   render();
   renderHistory();
-  renderCatalogue();
-
-  $('parseStatus').textContent = `Successfully parsed & deduplicated ${observations.length.toLocaleString()} listings!`;
-  $('parse').disabled = false;
+  alert(`Successfully added observation for ${name} (${money(priceVal)})!`);
+  page('market');
 };
 
 async function allRows(table, columns = '*') {
@@ -705,6 +920,7 @@ async function init() {
   $('catFilter').onchange = render;
   $('filter').onchange = render;
   $('itemCat').innerHTML = cats.map(c => `<option>${c}</option>`).join('');
+  $('manualCat').innerHTML = cats.map(c => `<option>${c}</option>`).join('');
 
   if (client) {
     try {
