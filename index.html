@@ -241,14 +241,22 @@ const notice = (s, error = false) => {
 };
 
 let client = null;
-try {
-  if (window.supabase && typeof window.supabase.createClient === 'function') {
+if (window.supabase && typeof window.supabase.createClient === 'function') {
+  try {
     client = window.supabase.createClient(URL_BASE, KEY);
-  } else {
-    notice('Failed to load Supabase SDK from CDN. Check your internet or ad-blocker.', true);
+  } catch (err) {
+    notice('Supabase init error: ' + err.message, true);
   }
-} catch (err) {
-  notice('Supabase Client Init Error: ' + err.message, true);
+} else {
+  notice('Failed to load Supabase SDK from CDN. Check your internet connection or ad-blocker.', true);
+}
+
+// Timeout wrapper so network calls never hang indefinitely
+function withTimeout(promise, ms = 7000, label = 'Request') {
+  return new Promise((resolve, reject) => {
+    let timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms/1000}s. Check if Supabase database is paused or blocked.`)), ms);
+    promise.then(res => { clearTimeout(timer); resolve(res); }, err => { clearTimeout(timer); reject(err); });
+  });
 }
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -324,8 +332,10 @@ function renderTrend(groupKey) {
   let minP = Math.min(...prices), maxP = Math.max(...prices);
 
   $('cardAvg').textContent = money(e.avg);
-  $('cardMed').textContent = money(e.median);$('cardMin').textContent = money(minP);
-  $('cardMax').textContent = money(maxP);$('cardCount').textContent = `${groupObs.length} obs`;
+  $('cardMed').textContent = money(e.median);
+  $('cardMin').textContent = money(minP);
+  $('cardMax').textContent = money(maxP);
+  $('cardCount').textContent = `${groupObs.length} obs`;
 
   let trendText = '🟢 Stable';
   if (groupObs.length >= 2) {
@@ -382,7 +392,7 @@ function render() {
     groups.get(k).obs.push(o);
   }
 
-  let search = $('search').value.toLowerCase(), type =$('filter').value;
+  let search = $('search').value.toLowerCase(), type = $('filter').value;
   $('marketRows').innerHTML = [...groups.values()].filter(g => g.type === type && g.item?.name.toLowerCase().includes(search)).map(g => {
     let e = estimate(g.prices), minP = Math.min(...g.prices), maxP = Math.max(...g.prices);
     let sortedObs = [...g.obs].sort((a, b) => new Date(b.observed_at || 0) - new Date(a.observed_at || 0));
@@ -395,7 +405,8 @@ async function allRows(table, columns = '*') {
   if (!client) return [];
   let rows = [];
   for (let from = 0; ; from += 1000) {
-    let {data, error} = await client.from(table).select(columns).order('id').range(from, from + 999);
+    let req = client.from(table).select(columns).order('id').range(from, from + 999);
+    let {data, error} = await withTimeout(req, 8000, `Fetching ${table}`);
     if (error) throw error;
     if (data) rows.push(...data);
     if (!data || data.length < 1000) break;
@@ -406,7 +417,7 @@ async function allRows(table, columns = '*') {
 async function load() {
   if (!client) return;
   try {
-    notice('Loading market data…');
+    notice('Loading market data from Supabase…');
     items = await allRows('items');
     variants = await allRows('equipment_variants');
     
@@ -418,7 +429,8 @@ async function load() {
         observations = await allRows('price_observations', 'id,item_id,variant_id,price,quantity,listing_type,observed_at,source_name,confidence');
       } catch (tableErr) {
         for (let from = 0; ; from += 1000) {
-          let {data, error} = await client.rpc('public_market_observations').range(from, from + 999);
+          let req = client.rpc('public_market_observations').range(from, from + 999);
+          let {data, error} = await withTimeout(req, 8000, 'Fetching market RPC');
           if (error) throw error;
           if (data) observations.push(...data);
           if (!data || data.length < 1000) break;
@@ -433,26 +445,22 @@ async function load() {
 }
 
 async function init() {
-  if (!client) {
-    notice('Unable to connect to Supabase library. Check connection or ad-blocker.', true);
-    return;
-  }
+  if (!client) return;
 
-  // 1. Trigger market load right away (don't block on auth)
+  // 1. Trigger market load right away
   let dataLoadPromise = load();
 
   // 2. Auth check with 3-second timeout guard
   try {
-    let authPromise = client.auth.getUser();
-    let timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Auth check timeout')), 3000));
-    
-    let res = await Promise.race([authPromise, timeoutPromise]);
+    let authReq = client.auth.getUser();
+    let res = await withTimeout(authReq, 3000, 'Auth check');
     let user = res?.data?.user;
     admin = user?.id === ADMIN;
 
     $('identity').textContent = admin ? 'Admin connected' : 'Public viewer';
     document.querySelectorAll('.admin').forEach(x => x.classList.toggle('hide', !admin));
-    $('loginBtn').classList.toggle('hide', !!user);$('logoutBtn').classList.toggle('hide', !user);
+    $('loginBtn').classList.toggle('hide', !!user);
+    $('logoutBtn').classList.toggle('hide', !user);
   } catch (err) {
     admin = false;
     $('identity').textContent = 'Public viewer';
@@ -461,9 +469,11 @@ async function init() {
   await dataLoadPromise;
 }
 
-$('loginBtn').onclick = () => page('auth');$('signIn').onclick = async () => {
+$('loginBtn').onclick = () => page('auth');
+$('signIn').onclick = async () => {
   if (!client) return notice('Supabase client not connected', true);
-  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});$('password').value = '';
+  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});
+  $('password').value = '';
   if (error) return notice(error.message, true);
   await init();
   page('market');
@@ -802,7 +812,6 @@ $('commit').onclick = () => guard(async () => {
   $('parseStatus').textContent = `Import completed! Successfully imported ${count.toLocaleString()} observations to Supabase.`;
 });
 
-// Run initialization
 init();
 </script>
 </body>
