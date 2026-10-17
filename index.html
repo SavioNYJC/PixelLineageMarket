@@ -457,8 +457,7 @@ async function init() {
 
     $('identity').textContent = admin ? 'Admin connected' : 'Public viewer';
     document.querySelectorAll('.admin').forEach(x => x.classList.toggle('hide', !admin));
-    $('loginBtn').classList.toggle('hide', !!user);
-    $('logoutBtn').classList.toggle('hide', !user);
+    $('loginBtn').classList.toggle('hide', !!user);$('logoutBtn').classList.toggle('hide', !user);
   } catch (err) {
     admin = false;
     $('identity').textContent = 'Public viewer';
@@ -467,11 +466,9 @@ async function init() {
   await dataLoadPromise;
 }
 
-$('loginBtn').onclick = () => page('auth');
-$('signIn').onclick = async () => {
+$('loginBtn').onclick = () => page('auth');$('signIn').onclick = async () => {
   if (!client) return notice('Supabase client not connected', true);
-  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});
-  $('password').value = '';
+  let {error} = await client.auth.signInWithPassword({email: $('email').value, password: $('password').value});$('password').value = '';
   if (error) return notice(error.message, true);
   await init();
   page('market');
