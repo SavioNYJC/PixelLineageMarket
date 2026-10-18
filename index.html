@@ -741,8 +741,8 @@ async function fetchAllSupabaseRows(tableName) {
   for (let from = 0; ; from += 1000) {
     let { data, error } = await client.from(tableName).select('*').range(from, from + 999);
     if (error) {
-      console.warn(`Query on ${tableName} failed:`, error);
-      return rows;
+      console.error(`Query on ${tableName} failed:`, error);
+      throw new Error(`Permission/Read error on table '${tableName}': ${error.message}`);
     }
     if (data) rows.push(...data);
     if (!data || data.length < 1000) break;
